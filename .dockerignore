@@ -1,0 +1,16 @@
+.git
+.github
+
+# local/editor
+.idea
+.vscode
+.DS_Store
+
+# build outputs
+bin
+dist
+tmp
+
+# frontend deps (if present)
+**/node_modules
+

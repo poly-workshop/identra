@@ -1,0 +1,25 @@
+grpc_port = 50051
+
+[auth]
+jwt_secret = "jwt_secret"
+oauth_state_expiration = "10m"
+token_expiration = "24h"
+
+[redis]
+urls = "localhost:6379"
+
+[gorm_client.database]
+driver = "sqlite"
+name = "data/users.db"
+sslmode = "disable"
+
+[presistence]
+type = "gorm"
+
+[persistence.gorm]
+driver = "sqlite"
+name = "data/users.db"
+sslmode = "disable"
+
+[smtp_mailer]
+host = "" # If empty, mailing is disabled
