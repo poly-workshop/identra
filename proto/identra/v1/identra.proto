@@ -1,0 +1,158 @@
+syntax = "proto3";
+package identra.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/poly-workshop/identra/gen/proto/identra/v1;identra_v1_pb";
+
+// Token contains a JWT value and its Unix expiration time.
+message Token {
+  // Signed JWT string.
+  string token = 1;
+  // Expiration time as a Unix timestamp (seconds since epoch).
+  int64 expires_at = 2;
+}
+
+// TokenPair contains both access and refresh tokens following JWKS standards
+message TokenPair {
+  // Short-lived access token for API authentication (typically 15 minutes)
+  Token access_token = 1;
+  // Long-lived refresh token for obtaining new access tokens (typically 7 days)
+  Token refresh_token = 2;
+  // Token type, typically "Bearer"
+  string token_type = 3;
+}
+
+service IdentraService {
+  // GetJWKS returns the JSON Web Key Set for verifying tokens
+  rpc GetJWKS(GetJWKSRequest) returns (GetJWKSResponse) {
+    option (google.api.http) = {get: "/.well-known/jwks.json"};
+  }
+  rpc GetOAuthAuthorizationURL(GetOAuthAuthorizationURLRequest) returns (GetOAuthAuthorizationURLResponse) {
+    option (google.api.http) = {get: "/oauth/url"};
+  }
+  rpc LoginByOAuth(LoginByOAuthRequest) returns (LoginByOAuthResponse) {
+    option (google.api.http) = {
+      post: "/oauth/login"
+      body: "*"
+    };
+  }
+  rpc BindUserByOAuth(BindUserByOAuthRequest) returns (BindUserByOAuthResponse) {
+    option (google.api.http) = {
+      post: "/oauth/bind"
+      body: "*"
+    };
+  }
+  rpc SendLoginEmailCode(SendLoginEmailCodeRequest) returns (SendLoginEmailCodeResponse) {
+    option (google.api.http) = {
+      post: "/email/code"
+      body: "*"
+    };
+  }
+  rpc LoginByEmailCode(LoginByEmailCodeRequest) returns (LoginByEmailCodeResponse) {
+    option (google.api.http) = {
+      post: "/email/login"
+      body: "*"
+    };
+  }
+  rpc LoginByPassword(LoginByPasswordRequest) returns (LoginByPasswordResponse) {
+    option (google.api.http) = {
+      post: "/password/login"
+      body: "*"
+    };
+  }
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse) {
+    option (google.api.http) = {
+      post: "/token/refresh"
+      body: "*"
+    };
+  }
+}
+
+// JSON Web Key represents a single key in the JWKS
+message JSONWebKey {
+  // Key type (e.g., "RSA", "EC")
+  string kty = 1;
+  // Algorithm (e.g., "RS256", "ES256")
+  string alg = 2;
+  // Key usage (e.g., "sig" for signature)
+  string use = 3;
+  // Key ID
+  string kid = 4;
+  // RSA modulus (Base64URL encoded, for RSA keys)
+  optional string n = 5;
+  // RSA exponent (Base64URL encoded, for RSA keys)
+  optional string e = 6;
+  // EC curve name (for EC keys)
+  optional string crv = 7;
+  // EC x coordinate (Base64URL encoded, for EC keys)
+  optional string x = 8;
+  // EC y coordinate (Base64URL encoded, for EC keys)
+  optional string y = 9;
+}
+
+message GetJWKSRequest {}
+message GetJWKSResponse {
+  // List of JSON Web Keys
+  repeated JSONWebKey keys = 1;
+}
+
+message GetOAuthAuthorizationURLRequest {
+  string provider = 1;
+  optional string redirect_url = 2;
+}
+message GetOAuthAuthorizationURLResponse {
+  string url = 1;
+  string state = 2;
+}
+
+message LoginByOAuthRequest {
+  string code = 1;
+  string state = 2;
+}
+message LoginByOAuthResponse {
+  TokenPair token = 1;
+}
+
+message BindUserByOAuthRequest {
+  // Access token for the currently authenticated user
+  string access_token = 1;
+  // OAuth authorization code received from the provider
+  string code = 2;
+  // OAuth state to validate the flow
+  string state = 3;
+}
+message BindUserByOAuthResponse {
+  // Updated token pair after binding completes
+  TokenPair token = 1;
+}
+
+message SendLoginEmailCodeRequest {
+  string email = 1;
+  // When true, send the email using HTML template; otherwise plain text
+  bool use_html = 2;
+}
+message SendLoginEmailCodeResponse {}
+
+message LoginByEmailCodeRequest {
+  string email = 1;
+  string code = 2;
+}
+message LoginByEmailCodeResponse {
+  TokenPair token = 1;
+}
+
+message LoginByPasswordRequest {
+  string email = 1;
+  string password = 2;
+}
+message LoginByPasswordResponse {
+  TokenPair token = 1;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+message RefreshTokenResponse {
+  TokenPair token = 1;
+}
