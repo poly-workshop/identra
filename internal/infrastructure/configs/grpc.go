@@ -28,6 +28,7 @@ type OAuthConfig struct {
 	StateExpirationDuration time.Duration
 	GithubClientID          string
 	GithubClientSecret      string
+	FetchEmailIfMissing     bool
 }
 
 type TokenConfig struct {
@@ -86,6 +87,7 @@ func LoadGRPC() GRPCConfig {
 				StateExpirationDuration: app.Config().GetDuration(AuthOAuthStateExpirationKey),
 				GithubClientID:          app.Config().GetString(AuthGithubClientIDKey),
 				GithubClientSecret:      app.Config().GetString(AuthGithubClientSecretKey),
+				FetchEmailIfMissing:     app.Config().GetBool(AuthOAuthFetchEmailIfMissingKey),
 			},
 			Token: TokenConfig{
 				Issuer:                 app.Config().GetString(AuthTokenIssuerKey),

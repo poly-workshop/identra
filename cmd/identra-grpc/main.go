@@ -81,6 +81,7 @@ func toIdentraConfig(
 		RSAPrivateKey:                  authCfg.RSAPrivateKey,
 		GithubClientID:                 authCfg.OAuth.GithubClientID,
 		GithubClientSecret:             authCfg.OAuth.GithubClientSecret,
+		OAuthFetchEmailIfMissing:       authCfg.OAuth.FetchEmailIfMissing,
 		OAuthStateExpirationDuration:   authCfg.OAuth.StateExpirationDuration,
 		AccessTokenExpirationDuration:  authCfg.Token.AccessTokenExpiration,
 		RefreshTokenExpirationDuration: authCfg.Token.RefreshTokenExpiration,

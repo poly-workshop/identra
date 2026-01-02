@@ -36,14 +36,15 @@ var supportedProviders = map[string]struct{}{
 type Service struct {
 	identra_v1_pb.UnimplementedIdentraServiceServer
 
-	emailCodeStore    cache.EmailCodeStore
-	oauthStateStore   oauth.StateStore
-	userStore         domain.UserStore
-	userStoreCleanup  func(context.Context) error
-	keyManager        *security.KeyManager
-	tokenCfg          security.TokenConfig
-	githubOAuthConfig *oauth2.Config
-	mailer            *smtpmailer.Mailer
+	emailCodeStore           cache.EmailCodeStore
+	oauthStateStore          oauth.StateStore
+	userStore                domain.UserStore
+	userStoreCleanup         func(context.Context) error
+	keyManager               *security.KeyManager
+	tokenCfg                 security.TokenConfig
+	githubOAuthConfig        *oauth2.Config
+	oauthFetchEmailIfMissing bool
+	mailer                   *smtpmailer.Mailer
 }
 
 func NewService(ctx context.Context, cfg Config) (*Service, error) {
@@ -105,14 +106,15 @@ func NewService(ctx context.Context, cfg Config) (*Service, error) {
 	}
 
 	return &Service{
-		userStore:         userStore,
-		keyManager:        km,
-		tokenCfg:          tokenCfg,
-		oauthStateStore:   oauth.NewInMemoryStateStore(stateTTL),
-		emailCodeStore:    emailStore,
-		githubOAuthConfig: githubCfg,
-		mailer:            mailer,
-		userStoreCleanup:  cleanup,
+		userStore:                userStore,
+		keyManager:               km,
+		tokenCfg:                 tokenCfg,
+		oauthStateStore:          oauth.NewInMemoryStateStore(stateTTL),
+		emailCodeStore:           emailStore,
+		githubOAuthConfig:        githubCfg,
+		oauthFetchEmailIfMissing: cfg.OAuthFetchEmailIfMissing,
+		mailer:                   mailer,
+		userStoreCleanup:         cleanup,
 	}, nil
 }
 
@@ -193,9 +195,7 @@ func (s *Service) LoginByOAuth(
 		slog.ErrorContext(ctx, "failed to fetch user info", "error", err)
 		return nil, status.Error(codes.Unauthenticated, "failed to fetch user info")
 	}
-	if userInfo.Email == "" {
-		return nil, status.Error(codes.FailedPrecondition, "email is required from provider")
-	}
+	s.maybeFillOAuthEmail(ctx, userProvider, token.AccessToken, &userInfo)
 
 	authUser, err := s.ensureOAuthUser(ctx, userInfo)
 	if err != nil {
@@ -264,9 +264,7 @@ func (s *Service) BindUserByOAuth(
 		slog.ErrorContext(ctx, "failed to fetch user info (bind)", "error", err)
 		return nil, status.Error(codes.Unauthenticated, "failed to fetch user info")
 	}
-	if userInfo.Email == "" {
-		return nil, status.Error(codes.FailedPrecondition, "email is required from provider")
-	}
+	s.maybeFillOAuthEmail(ctx, userProvider, token.AccessToken, &userInfo)
 
 	providerUser, err := s.userStore.GetByGithubID(ctx, userInfo.ID)
 	switch {
@@ -577,6 +575,11 @@ func (s *Service) ensureOAuthUser(ctx context.Context, info UserInfo) (*domain.U
 	case err == nil:
 		return s.updateEmailIfNeeded(ctx, existing, info.Email)
 	case errors.Is(err, domain.ErrNotFound):
+		// If user is not linked by provider id, we need email to link by email or create a new user.
+		// (Email may be missing for some OAuth users, depending on provider settings / privacy.)
+		if strings.TrimSpace(info.Email) == "" {
+			return nil, status.Error(codes.FailedPrecondition, "email is required to create or link user")
+		}
 		byEmail, emailErr := s.userStore.GetByEmail(ctx, info.Email)
 		switch {
 		case emailErr == nil:
@@ -617,6 +620,26 @@ func (s *Service) recordLogin(ctx context.Context, usr *domain.UserModel) {
 	if err := s.userStore.Update(ctx, usr); err != nil {
 		slog.WarnContext(ctx, "failed to record last login", "error", err, "user_id", usr.ID)
 	}
+}
+
+func (s *Service) maybeFillOAuthEmail(ctx context.Context, provider UserInfoProvider, accessToken string, info *UserInfo) {
+	if info == nil || info.Email != "" || !s.oauthFetchEmailIfMissing {
+		return
+	}
+	if strings.TrimSpace(accessToken) == "" {
+		return
+	}
+
+	emailProvider, ok := provider.(EmailProvider)
+	if !ok {
+		return
+	}
+
+	email, err := emailProvider.GetEmail(ctx, accessToken)
+	if err != nil || strings.TrimSpace(email) == "" {
+		return
+	}
+	info.Email = strings.TrimSpace(email)
 }
 
 func buildUserStore(ctx context.Context, cfg Config) (domain.UserStore, func(context.Context) error, error) {

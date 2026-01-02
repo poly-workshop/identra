@@ -16,6 +16,10 @@ type UserInfoProvider interface {
 	GetUserInfo(ctx context.Context, token string) (UserInfo, error)
 }
 
+type EmailProvider interface {
+	GetEmail(ctx context.Context, token string) (string, error)
+}
+
 func GetUserProvider(name string) (UserInfoProvider, error) {
 	switch name {
 	case "github":
@@ -37,4 +41,35 @@ func (g *GitHubUserInfoProvider) GetUserInfo(ctx context.Context, token string) 
 		ID:    fmt.Sprintf("%d", user.GetID()),
 		Email: user.GetEmail(),
 	}, nil
+}
+
+func (g *GitHubUserInfoProvider) GetEmail(ctx context.Context, token string) (string, error) {
+	client := github.NewClient(nil).WithAuthToken(token)
+	emails, _, err := client.Users.ListEmails(ctx, nil)
+	if err != nil {
+		return "", err
+	}
+
+	var firstVerified string
+	var firstAny string
+	for _, e := range emails {
+		email := e.GetEmail()
+		if email == "" {
+			continue
+		}
+		if firstAny == "" {
+			firstAny = email
+		}
+		if e.GetPrimary() && e.GetVerified() {
+			return email, nil
+		}
+		if firstVerified == "" && e.GetVerified() {
+			firstVerified = email
+		}
+	}
+
+	if firstVerified != "" {
+		return firstVerified, nil
+	}
+	return firstAny, nil
 }
