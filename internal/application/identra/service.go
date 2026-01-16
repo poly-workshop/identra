@@ -25,6 +25,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -142,7 +143,7 @@ func (s *Service) GetJWKS(ctx context.Context, _ *identra_v1_pb.GetJWKSRequest) 
 		"Cache-Control", "public, max-age=3600",
 		"ETag", etag,
 	)
-	if err := metadata.SetHeader(ctx, md); err != nil {
+	if err := grpc.SetHeader(ctx, md); err != nil {
 		// Log error but don't fail the request
 		slog.Warn("failed to set JWKS cache headers", "error", err)
 	}
