@@ -11,7 +11,8 @@ import (
 // This example demonstrates the key rotation workflow for JWKS.
 // In production, these steps would be automated or executed via CLI/API.
 func main() {
-	fmt.Println("=== JWKS Key Rotation Example ===\n")
+	fmt.Println("=== JWKS Key Rotation Example ===")
+	fmt.Println()
 
 	// Step 1: Initialize KeyManager with first key
 	km := security.GetKeyManager()

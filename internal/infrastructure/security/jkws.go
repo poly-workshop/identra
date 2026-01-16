@@ -76,6 +76,7 @@ func GetKeyManager() *KeyManager {
 
 // InitializeFromPEM initializes the key manager from a PEM-encoded private key.
 // The key is added to the key ring in ACTIVE state.
+// If an ACTIVE key already exists, it is demoted to PASSIVE.
 func (km *KeyManager) InitializeFromPEM(privateKeyPEM string) error {
 	km.mu.Lock()
 	defer km.mu.Unlock()
@@ -117,6 +118,13 @@ func (km *KeyManager) InitializeFromPEM(privateKeyPEM string) error {
 	publicKey := &privateKey.PublicKey
 	keyID := generateKeyID(publicKey)
 
+	// Demote any existing ACTIVE key to PASSIVE
+	for _, entry := range km.keys {
+		if entry.state == KeyStateActive {
+			entry.state = KeyStatePassive
+		}
+	}
+
 	// Add to key ring as ACTIVE
 	km.keys[keyID] = &KeyEntry{
 		privateKey: privateKey,
@@ -134,6 +142,7 @@ func (km *KeyManager) InitializeFromPEM(privateKeyPEM string) error {
 }
 
 // GenerateKeyPair generates a new RSA key pair and adds it to the key ring in ACTIVE state.
+// If an ACTIVE key already exists, it is demoted to PASSIVE.
 func (km *KeyManager) GenerateKeyPair() error {
 	km.mu.Lock()
 	defer km.mu.Unlock()
@@ -150,6 +159,13 @@ func (km *KeyManager) GenerateKeyPair() error {
 
 	publicKey := &privateKey.PublicKey
 	keyID := generateKeyID(publicKey)
+
+	// Demote any existing ACTIVE key to PASSIVE
+	for _, entry := range km.keys {
+		if entry.state == KeyStateActive {
+			entry.state = KeyStatePassive
+		}
+	}
 
 	// Add to key ring as ACTIVE
 	km.keys[keyID] = &KeyEntry{

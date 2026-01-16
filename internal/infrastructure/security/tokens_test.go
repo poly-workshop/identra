@@ -571,3 +571,96 @@ func getPublicKeyFromJWKS(jwks *identra_v1_pb.GetJWKSResponse, tokenID string) *
 	// For testing, we just return nil if not found
 	return nil
 }
+
+func TestMultipleActiveKeyPrevention(t *testing.T) {
+	km := &KeyManager{}
+
+	// Generate first key
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate first key: %v", err)
+	}
+	firstKeyID := km.GetKeyID()
+
+	// Generate second key - should demote first
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate second key: %v", err)
+	}
+	secondKeyID := km.GetKeyID()
+
+	// Verify only one ACTIVE key
+	keys := km.ListKeys()
+	activeCount := 0
+	for _, k := range keys {
+		if k.State == KeyStateActive {
+			activeCount++
+			if k.KeyID != secondKeyID {
+				t.Errorf("Expected ACTIVE key to be %s, got %s", secondKeyID, k.KeyID)
+			}
+		}
+	}
+	if activeCount != 1 {
+		t.Errorf("Expected exactly 1 ACTIVE key, got %d", activeCount)
+	}
+
+	// Verify first key was demoted to PASSIVE
+	found := false
+	for _, k := range keys {
+		if k.KeyID == firstKeyID {
+			found = true
+			if k.State != KeyStatePassive {
+				t.Errorf("Expected first key to be PASSIVE, got %s", k.State)
+			}
+		}
+	}
+	if !found {
+		t.Error("First key not found in key ring")
+	}
+}
+
+func TestInitializeFromPEMWithExistingKey(t *testing.T) {
+	km := &KeyManager{}
+
+	// Generate initial key
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate initial key: %v", err)
+	}
+	firstKeyID := km.GetKeyID()
+
+	// Export and re-import (simulating loading from config)
+	pem, err := km.ExportPrivateKeyPEM()
+	if err != nil {
+		t.Fatalf("Failed to export PEM: %v", err)
+	}
+
+	// Create a new key and then initialize from PEM
+	newKm := &KeyManager{}
+	if err := newKm.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate key in new manager: %v", err)
+	}
+	tempKeyID := newKm.GetKeyID()
+
+	// Initialize from PEM - should demote the temp key
+	if err := newKm.InitializeFromPEM(pem); err != nil {
+		t.Fatalf("Failed to initialize from PEM: %v", err)
+	}
+
+	// Verify the PEM key is now ACTIVE
+	if newKm.GetKeyID() != firstKeyID {
+		t.Errorf("Expected ACTIVE key to be from PEM (%s), got %s", firstKeyID, newKm.GetKeyID())
+	}
+
+	// Verify temp key was demoted
+	keys := newKm.ListKeys()
+	activeCount := 0
+	for _, k := range keys {
+		if k.State == KeyStateActive {
+			activeCount++
+		}
+		if k.KeyID == tempKeyID && k.State != KeyStatePassive {
+			t.Errorf("Expected temp key to be PASSIVE, got %s", k.State)
+		}
+	}
+	if activeCount != 1 {
+		t.Errorf("Expected exactly 1 ACTIVE key after PEM init, got %d", activeCount)
+	}
+}
