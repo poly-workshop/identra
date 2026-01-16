@@ -165,7 +165,9 @@ func generateJWKSETag(jwks *identra_v1_pb.GetJWKSResponse) string {
 	}
 
 	hash := sha256.Sum256([]byte(keyIDs))
-	return fmt.Sprintf(`"%x"`, hash[:16]) // Use first 16 bytes for shorter ETag
+	// Use first 16 bytes (128 bits) for shorter ETag - balances uniqueness with header size
+	// Quoted per HTTP ETag specification (RFC 7232)
+	return fmt.Sprintf(`"%x"`, hash[:16])
 }
 
 func (s *Service) GetOAuthAuthorizationURL(

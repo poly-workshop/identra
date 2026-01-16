@@ -359,24 +359,21 @@ func (km *KeyManager) RetireKey(keyID string) error {
 	return nil
 }
 
-// ListKeys returns information about all keys in the key ring.
-func (km *KeyManager) ListKeys() []struct {
+// KeyInfo contains information about a key in the key ring.
+type KeyInfo struct {
 	KeyID string
 	State KeyState
-} {
+}
+
+// ListKeys returns information about all keys in the key ring.
+func (km *KeyManager) ListKeys() []KeyInfo {
 	km.mu.RLock()
 	defer km.mu.RUnlock()
 
-	result := make([]struct {
-		KeyID string
-		State KeyState
-	}, 0, len(km.keys))
+	result := make([]KeyInfo, 0, len(km.keys))
 
 	for _, entry := range km.keys {
-		result = append(result, struct {
-			KeyID string
-			State KeyState
-		}{
+		result = append(result, KeyInfo{
 			KeyID: entry.keyID,
 			State: entry.state,
 		})
