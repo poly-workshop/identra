@@ -3,6 +3,7 @@ package identra
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -25,6 +26,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -127,7 +129,42 @@ func (s *Service) Close(ctx context.Context) error {
 }
 
 func (s *Service) GetJWKS(ctx context.Context, _ *identra_v1_pb.GetJWKSRequest) (*identra_v1_pb.GetJWKSResponse, error) {
-	return s.keyManager.GetJWKS(), nil
+	response := s.keyManager.GetJWKS()
+
+	// Generate ETag based on hash of key IDs in the response
+	// This allows clients to efficiently check if keys have changed
+	etag := generateJWKSETag(response)
+
+	// Set HTTP cache headers via gRPC metadata
+	// Cache-Control: public, max-age=3600 (1 hour)
+	// This allows clients to cache the JWKS and reduces load on the server
+	md := metadata.Pairs(
+		"Cache-Control", "public, max-age=3600",
+		"ETag", etag,
+	)
+	if err := metadata.SetHeader(ctx, md); err != nil {
+		// Log error but don't fail the request
+		slog.Warn("failed to set JWKS cache headers", "error", err)
+	}
+
+	return response, nil
+}
+
+// generateJWKSETag creates an ETag based on the key IDs in the JWKS response.
+// This allows clients to efficiently check if the key set has changed.
+func generateJWKSETag(jwks *identra_v1_pb.GetJWKSResponse) string {
+	if jwks == nil || len(jwks.Keys) == 0 {
+		return `"empty"`
+	}
+
+	// Concatenate all key IDs and hash them
+	var keyIDs string
+	for _, key := range jwks.Keys {
+		keyIDs += key.Kid
+	}
+
+	hash := sha256.Sum256([]byte(keyIDs))
+	return fmt.Sprintf(`"%x"`, hash[:16]) // Use first 16 bytes for shorter ETag
 }
 
 func (s *Service) GetOAuthAuthorizationURL(

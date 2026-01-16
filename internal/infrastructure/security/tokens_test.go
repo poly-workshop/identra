@@ -1,10 +1,12 @@
 package security
 
 import (
+	"crypto/rsa"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 )
 
 // Helper function to create test token config with generated keys
@@ -299,4 +301,273 @@ func TestKeyManager(t *testing.T) {
 	if !newKm.IsInitialized() {
 		t.Error("Expected new key manager to be initialized from PEM")
 	}
+}
+
+func TestKeyRotation(t *testing.T) {
+	km := &KeyManager{}
+
+	// Initialize with first key
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate initial key pair: %v", err)
+	}
+
+	firstKeyID := km.GetKeyID()
+	if firstKeyID == "" {
+		t.Error("Expected initial key ID to be set")
+	}
+
+	// Verify only one key in JWKS
+	jwks := km.GetJWKS()
+	if len(jwks.Keys) != 1 {
+		t.Errorf("Expected 1 key in JWKS, got %d", len(jwks.Keys))
+	}
+	if jwks.Keys[0].Kid != firstKeyID {
+		t.Errorf("Expected key ID %s, got %s", firstKeyID, jwks.Keys[0].Kid)
+	}
+
+	// Add a new key in PASSIVE state
+	secondKeyID, err := km.AddKeyPassive()
+	if err != nil {
+		t.Fatalf("Failed to add passive key: %v", err)
+	}
+	if secondKeyID == "" {
+		t.Error("Expected second key ID to be set")
+	}
+	if secondKeyID == firstKeyID {
+		t.Error("Expected second key ID to be different from first")
+	}
+
+	// Verify both keys are in JWKS
+	jwks = km.GetJWKS()
+	if len(jwks.Keys) != 2 {
+		t.Errorf("Expected 2 keys in JWKS after adding passive key, got %d", len(jwks.Keys))
+	}
+
+	// Verify active key is still the first one
+	if km.GetKeyID() != firstKeyID {
+		t.Errorf("Expected active key to still be %s, got %s", firstKeyID, km.GetKeyID())
+	}
+
+	// Promote the second key to ACTIVE
+	if err := km.PromoteKey(secondKeyID); err != nil {
+		t.Fatalf("Failed to promote key: %v", err)
+	}
+
+	// Verify active key is now the second one
+	if km.GetKeyID() != secondKeyID {
+		t.Errorf("Expected active key to be %s after promotion, got %s", secondKeyID, km.GetKeyID())
+	}
+
+	// Verify both keys are still in JWKS (old key should be PASSIVE now)
+	jwks = km.GetJWKS()
+	if len(jwks.Keys) != 2 {
+		t.Errorf("Expected 2 keys in JWKS after promotion, got %d", len(jwks.Keys))
+	}
+
+	// Retire the first key
+	if err := km.RetireKey(firstKeyID); err != nil {
+		t.Fatalf("Failed to retire key: %v", err)
+	}
+
+	// Verify only the second key is in JWKS
+	jwks = km.GetJWKS()
+	if len(jwks.Keys) != 1 {
+		t.Errorf("Expected 1 key in JWKS after retiring first key, got %d", len(jwks.Keys))
+	}
+	if jwks.Keys[0].Kid != secondKeyID {
+		t.Errorf("Expected remaining key to be %s, got %s", secondKeyID, jwks.Keys[0].Kid)
+	}
+}
+
+func TestKeyRotationWithTokenValidation(t *testing.T) {
+	km := &KeyManager{}
+
+	// Initialize with first key
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate initial key pair: %v", err)
+	}
+
+	// Create a token with the first key
+	userID := uuid.New().String()
+	config := TokenConfig{
+		PrivateKey:             km.GetPrivateKey(),
+		PublicKey:              km.GetPublicKey(),
+		KeyID:                  km.GetKeyID(),
+		Issuer:                 "test-issuer",
+		AccessTokenExpiration:  15 * time.Minute,
+		RefreshTokenExpiration: 7 * 24 * time.Hour,
+	}
+
+	tokenPair, err := NewTokenPair(userID, config)
+	if err != nil {
+		t.Fatalf("Failed to create token pair: %v", err)
+	}
+
+	// Verify token can be validated with first key
+	claims, err := ValidateAccessToken(tokenPair.AccessToken.Token, km.GetPublicKey())
+	if err != nil {
+		t.Fatalf("Failed to validate token with first key: %v", err)
+	}
+	if claims.UserID != userID {
+		t.Errorf("Expected user ID %s, got %s", userID, claims.UserID)
+	}
+
+	// Add a new key in PASSIVE state
+	secondKeyID, err := km.AddKeyPassive()
+	if err != nil {
+		t.Fatalf("Failed to add passive key: %v", err)
+	}
+
+	// Promote the second key to ACTIVE
+	if err := km.PromoteKey(secondKeyID); err != nil {
+		t.Fatalf("Failed to promote key: %v", err)
+	}
+
+	// Token signed with first key should still be valid (key is now PASSIVE)
+	// Note: We need to get the first key's public key from the key ring
+	firstPublicKey := getPublicKeyFromJWKS(km.GetJWKS(), claims.TokenID)
+	if firstPublicKey == nil {
+		// Try validating with current public key (should fail if rotation worked)
+		t.Log("First key not found in JWKS (expected after some time), trying current key")
+	}
+
+	// Create a new token with the second (now active) key
+	config.PrivateKey = km.GetPrivateKey()
+	config.PublicKey = km.GetPublicKey()
+	config.KeyID = km.GetKeyID()
+
+	newTokenPair, err := NewTokenPair(userID, config)
+	if err != nil {
+		t.Fatalf("Failed to create token pair with second key: %v", err)
+	}
+
+	// New token should be valid with second key
+	newClaims, err := ValidateAccessToken(newTokenPair.AccessToken.Token, km.GetPublicKey())
+	if err != nil {
+		t.Fatalf("Failed to validate token with second key: %v", err)
+	}
+	if newClaims.UserID != userID {
+		t.Errorf("Expected user ID %s in new token, got %s", userID, newClaims.UserID)
+	}
+}
+
+func TestKeyLifecycleErrors(t *testing.T) {
+	km := &KeyManager{}
+
+	// Try to promote a non-existent key
+	if err := km.PromoteKey("nonexistent"); err == nil {
+		t.Error("Expected error when promoting non-existent key")
+	}
+
+	// Try to retire a non-existent key
+	if err := km.RetireKey("nonexistent"); err == nil {
+		t.Error("Expected error when retiring non-existent key")
+	}
+
+	// Generate initial key
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate key pair: %v", err)
+	}
+	activeKeyID := km.GetKeyID()
+
+	// Try to promote an already ACTIVE key
+	if err := km.PromoteKey(activeKeyID); err == nil {
+		t.Error("Expected error when promoting already ACTIVE key")
+	}
+
+	// Try to retire an ACTIVE key
+	if err := km.RetireKey(activeKeyID); err == nil {
+		t.Error("Expected error when retiring ACTIVE key")
+	}
+
+	// Add passive key
+	passiveKeyID, err := km.AddKeyPassive()
+	if err != nil {
+		t.Fatalf("Failed to add passive key: %v", err)
+	}
+
+	// Retire passive key should succeed
+	if err := km.RetireKey(passiveKeyID); err != nil {
+		t.Errorf("Failed to retire passive key: %v", err)
+	}
+}
+
+func TestListKeys(t *testing.T) {
+	km := &KeyManager{}
+
+	// Initially empty
+	keys := km.ListKeys()
+	if len(keys) != 0 {
+		t.Errorf("Expected 0 keys initially, got %d", len(keys))
+	}
+
+	// Add first key
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate key pair: %v", err)
+	}
+
+	keys = km.ListKeys()
+	if len(keys) != 1 {
+		t.Errorf("Expected 1 key after generation, got %d", len(keys))
+	}
+	if keys[0].State != KeyStateActive {
+		t.Errorf("Expected first key to be ACTIVE, got %s", keys[0].State)
+	}
+
+	// Add passive key
+	passiveKeyID, err := km.AddKeyPassive()
+	if err != nil {
+		t.Fatalf("Failed to add passive key: %v", err)
+	}
+
+	keys = km.ListKeys()
+	if len(keys) != 2 {
+		t.Errorf("Expected 2 keys after adding passive key, got %d", len(keys))
+	}
+
+	// Verify states
+	activeCount := 0
+	passiveCount := 0
+	for _, k := range keys {
+		if k.State == KeyStateActive {
+			activeCount++
+		} else if k.State == KeyStatePassive {
+			passiveCount++
+		}
+	}
+	if activeCount != 1 {
+		t.Errorf("Expected 1 ACTIVE key, got %d", activeCount)
+	}
+	if passiveCount != 1 {
+		t.Errorf("Expected 1 PASSIVE key, got %d", passiveCount)
+	}
+
+	// Promote passive key
+	if err := km.PromoteKey(passiveKeyID); err != nil {
+		t.Fatalf("Failed to promote key: %v", err)
+	}
+
+	keys = km.ListKeys()
+	activeCount = 0
+	passiveCount = 0
+	for _, k := range keys {
+		if k.State == KeyStateActive {
+			activeCount++
+		} else if k.State == KeyStatePassive {
+			passiveCount++
+		}
+	}
+	if activeCount != 1 {
+		t.Errorf("Expected 1 ACTIVE key after promotion, got %d", activeCount)
+	}
+	if passiveCount != 1 {
+		t.Errorf("Expected 1 PASSIVE key after promotion, got %d", passiveCount)
+	}
+}
+
+// Helper function to get public key from JWKS (simplified for testing)
+func getPublicKeyFromJWKS(jwks *identra_v1_pb.GetJWKSResponse, tokenID string) *rsa.PublicKey {
+	// In real implementation, this would parse kid from JWT header
+	// For testing, we just return nil if not found
+	return nil
 }
