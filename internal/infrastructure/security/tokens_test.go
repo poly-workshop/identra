@@ -1,12 +1,10 @@
 package security
 
 import (
-	"crypto/rsa"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
-	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 )
 
 // Helper function to create test token config with generated keys
@@ -424,11 +422,11 @@ func TestKeyRotationWithTokenValidation(t *testing.T) {
 	}
 
 	// Token signed with first key should still be valid (key is now PASSIVE)
-	// Note: We need to get the first key's public key from the key ring
-	firstPublicKey := getPublicKeyFromJWKS(km.GetJWKS(), claims.TokenID)
-	if firstPublicKey == nil {
-		// Try validating with current public key (should fail if rotation worked)
-		t.Log("First key not found in JWKS (expected after some time), trying current key")
+	// In a real scenario, we would extract kid from JWT header and use it to look up the key
+	// For this test, we just verify that both keys are still in JWKS
+	jwks := km.GetJWKS()
+	if len(jwks.Keys) != 2 {
+		t.Errorf("Expected 2 keys in JWKS after promotion, got %d", len(jwks.Keys))
 	}
 
 	// Create a new token with the second (now active) key
@@ -563,13 +561,6 @@ func TestListKeys(t *testing.T) {
 	if passiveCount != 1 {
 		t.Errorf("Expected 1 PASSIVE key after promotion, got %d", passiveCount)
 	}
-}
-
-// Helper function to get public key from JWKS (simplified for testing)
-func getPublicKeyFromJWKS(jwks *identra_v1_pb.GetJWKSResponse, tokenID string) *rsa.PublicKey {
-	// In real implementation, this would parse kid from JWT header
-	// For testing, we just return nil if not found
-	return nil
 }
 
 func TestMultipleActiveKeyPrevention(t *testing.T) {
