@@ -655,3 +655,59 @@ func TestInitializeFromPEMWithExistingKey(t *testing.T) {
 		t.Errorf("Expected exactly 1 ACTIVE key after PEM init, got %d", activeCount)
 	}
 }
+
+func TestJWKSDeterministicOrder(t *testing.T) {
+	km := &KeyManager{}
+
+	// Add multiple keys in random order
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate first key: %v", err)
+	}
+	
+	keyID2, err := km.AddKeyPassive()
+	if err != nil {
+		t.Fatalf("Failed to add second passive key: %v", err)
+	}
+	
+	keyID3, err := km.AddKeyPassive()
+	if err != nil {
+		t.Fatalf("Failed to add third passive key: %v", err)
+	}
+
+	// Get JWKS multiple times and verify order is consistent
+	jwks1 := km.GetJWKS()
+	jwks2 := km.GetJWKS()
+	jwks3 := km.GetJWKS()
+
+	// Verify all responses have the same number of keys
+	if len(jwks1.Keys) != len(jwks2.Keys) || len(jwks1.Keys) != len(jwks3.Keys) {
+		t.Errorf("Inconsistent number of keys across JWKS responses")
+	}
+
+	// Verify the order is the same in all responses
+	for i := range jwks1.Keys {
+		if jwks1.Keys[i].Kid != jwks2.Keys[i].Kid {
+			t.Errorf("Key order differs between responses 1 and 2 at index %d: %s vs %s", 
+				i, jwks1.Keys[i].Kid, jwks2.Keys[i].Kid)
+		}
+		if jwks1.Keys[i].Kid != jwks3.Keys[i].Kid {
+			t.Errorf("Key order differs between responses 1 and 3 at index %d: %s vs %s", 
+				i, jwks1.Keys[i].Kid, jwks3.Keys[i].Kid)
+		}
+	}
+
+	// Verify keys are sorted (alphanumeric order)
+	for i := 1; i < len(jwks1.Keys); i++ {
+		if jwks1.Keys[i-1].Kid > jwks1.Keys[i].Kid {
+			t.Errorf("Keys are not sorted: %s > %s", jwks1.Keys[i-1].Kid, jwks1.Keys[i].Kid)
+		}
+	}
+
+	// Clean up - retire the passive keys
+	if err := km.RetireKey(keyID2); err != nil {
+		t.Fatalf("Failed to retire key: %v", err)
+	}
+	if err := km.RetireKey(keyID3); err != nil {
+		t.Fatalf("Failed to retire key: %v", err)
+	}
+}

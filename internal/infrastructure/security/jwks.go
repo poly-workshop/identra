@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/big"
+	"sort"
 	"sync"
 
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
@@ -223,27 +224,38 @@ func (km *KeyManager) IsInitialized() bool {
 
 // GetJWKS returns the JSON Web Key Set containing all ACTIVE and PASSIVE public keys.
 // This enables smooth key rotation as both old and new keys are published during the transition.
+// Keys are sorted by KeyID to ensure deterministic output and stable ETags.
 func (km *KeyManager) GetJWKS() *identra_v1_pb.GetJWKSResponse {
 	km.mu.RLock()
 	defer km.mu.RUnlock()
 
 	var keys []*identra_v1_pb.JSONWebKey
 
-	// Include all ACTIVE and PASSIVE keys in the JWKS
-	for _, entry := range km.keys {
+	// Collect key IDs first to enable sorting for deterministic output
+	var keyIDs []string
+	for keyID, entry := range km.keys {
 		if entry.state == KeyStateActive || entry.state == KeyStatePassive {
-			n := base64.RawURLEncoding.EncodeToString(entry.publicKey.N.Bytes())
-			e := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(entry.publicKey.E)).Bytes())
-
-			keys = append(keys, &identra_v1_pb.JSONWebKey{
-				Kty: "RSA",
-				Alg: KeyAlgorithm,
-				Use: KeyUsage,
-				Kid: entry.keyID,
-				N:   &n,
-				E:   &e,
-			})
+			keyIDs = append(keyIDs, keyID)
 		}
+	}
+
+	// Sort key IDs to ensure deterministic order
+	sort.Strings(keyIDs)
+
+	// Build the JWKS response in sorted order
+	for _, keyID := range keyIDs {
+		entry := km.keys[keyID]
+		n := base64.RawURLEncoding.EncodeToString(entry.publicKey.N.Bytes())
+		e := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(entry.publicKey.E)).Bytes())
+
+		keys = append(keys, &identra_v1_pb.JSONWebKey{
+			Kty: "RSA",
+			Alg: KeyAlgorithm,
+			Use: KeyUsage,
+			Kid: entry.keyID,
+			N:   &n,
+			E:   &e,
+		})
 	}
 
 	return &identra_v1_pb.GetJWKSResponse{

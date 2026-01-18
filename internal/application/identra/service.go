@@ -158,16 +158,16 @@ func generateJWKSETag(jwks *identra_v1_pb.GetJWKSResponse) string {
 		return `"empty"`
 	}
 
-	// Concatenate all key IDs and hash them
-	var keyIDs string
+	// Join all key IDs with a delimiter to avoid ambiguous concatenations, then hash them
+	keyIDs := make([]string, 0, len(jwks.Keys))
 	for _, key := range jwks.Keys {
-		keyIDs += key.Kid
+		keyIDs = append(keyIDs, key.Kid)
 	}
 
-	hash := sha256.Sum256([]byte(keyIDs))
-	// Use first 16 bytes (128 bits) for shorter ETag - balances uniqueness with header size
+	hash := sha256.Sum256([]byte(strings.Join(keyIDs, ",")))
+	// Use the full 32 bytes (256 bits) of the SHA-256 hash to minimize collision risk
 	// Quoted per HTTP ETag specification (RFC 7232)
-	return fmt.Sprintf(`"%x"`, hash[:16])
+	return fmt.Sprintf(`"%x"`, hash[:])
 }
 
 func (s *Service) GetOAuthAuthorizationURL(
