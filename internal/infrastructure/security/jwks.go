@@ -54,7 +54,7 @@ type KeyManager struct {
 	privateKey *rsa.PrivateKey
 	publicKey  *rsa.PublicKey
 	keyID      string
-	
+
 	// Key ring for rotation support
 	keys map[string]*KeyEntry // keyed by keyID
 	mu   sync.RWMutex

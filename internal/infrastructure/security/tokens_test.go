@@ -663,12 +663,12 @@ func TestJWKSDeterministicOrder(t *testing.T) {
 	if err := km.GenerateKeyPair(); err != nil {
 		t.Fatalf("Failed to generate first key: %v", err)
 	}
-	
+
 	keyID2, err := km.AddKeyPassive()
 	if err != nil {
 		t.Fatalf("Failed to add second passive key: %v", err)
 	}
-	
+
 	keyID3, err := km.AddKeyPassive()
 	if err != nil {
 		t.Fatalf("Failed to add third passive key: %v", err)
@@ -687,11 +687,11 @@ func TestJWKSDeterministicOrder(t *testing.T) {
 	// Verify the order is the same in all responses
 	for i := range jwks1.Keys {
 		if jwks1.Keys[i].Kid != jwks2.Keys[i].Kid {
-			t.Errorf("Key order differs between responses 1 and 2 at index %d: %s vs %s", 
+			t.Errorf("Key order differs between responses 1 and 2 at index %d: %s vs %s",
 				i, jwks1.Keys[i].Kid, jwks2.Keys[i].Kid)
 		}
 		if jwks1.Keys[i].Kid != jwks3.Keys[i].Kid {
-			t.Errorf("Key order differs between responses 1 and 3 at index %d: %s vs %s", 
+			t.Errorf("Key order differs between responses 1 and 3 at index %d: %s vs %s",
 				i, jwks1.Keys[i].Kid, jwks3.Keys[i].Kid)
 		}
 	}

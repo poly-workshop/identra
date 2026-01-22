@@ -7,14 +7,14 @@ const (
 	HTTPPortKey = "http_port"
 
 	// Auth configuration keys
-	AuthRSAPrivateKeyKey          = "auth.rsa_private_key"
-	AuthOAuthStateExpirationKey   = "auth.oauth_state_expiration"
-	AuthAccessTokenExpirationKey  = "auth.access_token_expiration"
-	AuthRefreshTokenExpirationKey = "auth.refresh_token_expiration"
-	AuthTokenIssuerKey            = "auth.token_issuer"
+	AuthRSAPrivateKeyKey            = "auth.rsa_private_key"
+	AuthOAuthStateExpirationKey     = "auth.oauth_state_expiration"
+	AuthAccessTokenExpirationKey    = "auth.access_token_expiration"
+	AuthRefreshTokenExpirationKey   = "auth.refresh_token_expiration"
+	AuthTokenIssuerKey              = "auth.token_issuer"
 	AuthOAuthFetchEmailIfMissingKey = "auth.oauth.fetch_email_if_missing"
-	AuthGithubClientIDKey         = "auth.github.client_id"
-	AuthGithubClientSecretKey     = "auth.github.client_secret"
+	AuthGithubClientIDKey           = "auth.github.client_id"
+	AuthGithubClientSecretKey       = "auth.github.client_secret"
 
 	// Persistence configuration keys
 	PersistenceTypeKey            = "persistence.type"

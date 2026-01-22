@@ -29,7 +29,7 @@ func main() {
 	if err := km.GenerateKeyPair(); err != nil {
 		log.Fatalf("Failed to generate initial key: %v", err)
 	}
-	
+
 	initialKeyID := km.GetKeyID()
 	fmt.Printf("Step 1: Generated initial ACTIVE key: %s\n", initialKeyID)
 	printKeyStatus(km)
@@ -46,7 +46,7 @@ func main() {
 	// Step 3: Wait for JWKS cache propagation (simulated)
 	fmt.Println("\nStep 3: Waiting for JWKS cache propagation (1 hour in production)...")
 	fmt.Println("(Skipping wait in this example)")
-	
+
 	// Step 4: Promote new key to ACTIVE
 	fmt.Println("\nStep 4: Promoting new key to ACTIVE...")
 	if err := km.PromoteKey(newKeyID); err != nil {
@@ -69,7 +69,7 @@ func main() {
 	printKeyStatus(km)
 
 	fmt.Println("\n=== Key Rotation Complete ===")
-	
+
 	// Demonstrate token signing and verification
 	fmt.Println("\n=== Token Operations ===")
 	demonstrateTokenOperations(km)
@@ -85,7 +85,7 @@ func printKeyStatus(km *security.KeyManager) {
 		}
 		fmt.Printf("  - %s: %s%s\n", key.KeyID, key.State, status)
 	}
-	
+
 	// Show JWKS content
 	jwks := km.GetJWKS()
 	fmt.Printf("\nKeys published in JWKS: %d\n", len(jwks.Keys))
