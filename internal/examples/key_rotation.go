@@ -9,6 +9,16 @@ import (
 )
 
 // This example demonstrates the key rotation workflow for JWKS.
+//
+// NOTE: This example is located in the internal/ tree because it demonstrates
+// internal API usage. It uses packages under internal/infrastructure/security
+// which are not accessible to external packages per Go's internal package rules.
+//
+// This example is intended for:
+// - Internal operators managing Identra deployments
+// - Understanding the key rotation workflow
+// - Testing rotation procedures in development
+//
 // In production, these steps would be automated or executed via CLI/API.
 func main() {
 	fmt.Println("=== JWKS Key Rotation Example ===")
