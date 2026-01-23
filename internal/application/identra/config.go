@@ -14,7 +14,7 @@ type Config struct {
 	RSAPrivateKey                  string
 	GithubClientID                 string
 	GithubClientSecret             string
-	OAuthFetchEmailIfMissing        bool
+	OAuthFetchEmailIfMissing       bool
 	OAuthStateExpirationDuration   time.Duration
 	AccessTokenExpirationDuration  time.Duration
 	RefreshTokenExpirationDuration time.Duration

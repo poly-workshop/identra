@@ -300,3 +300,416 @@ func TestKeyManager(t *testing.T) {
 		t.Error("Expected new key manager to be initialized from PEM")
 	}
 }
+
+func TestKeyRotation(t *testing.T) {
+	km := &KeyManager{}
+
+	// Initialize with first key
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate initial key pair: %v", err)
+	}
+
+	firstKeyID := km.GetKeyID()
+	if firstKeyID == "" {
+		t.Error("Expected initial key ID to be set")
+	}
+
+	// Verify only one key in JWKS
+	jwks := km.GetJWKS()
+	if len(jwks.Keys) != 1 {
+		t.Errorf("Expected 1 key in JWKS, got %d", len(jwks.Keys))
+	}
+	if jwks.Keys[0].Kid != firstKeyID {
+		t.Errorf("Expected key ID %s, got %s", firstKeyID, jwks.Keys[0].Kid)
+	}
+
+	// Add a new key in PASSIVE state
+	secondKeyID, err := km.AddKeyPassive()
+	if err != nil {
+		t.Fatalf("Failed to add passive key: %v", err)
+	}
+	if secondKeyID == "" {
+		t.Error("Expected second key ID to be set")
+	}
+	if secondKeyID == firstKeyID {
+		t.Error("Expected second key ID to be different from first")
+	}
+
+	// Verify both keys are in JWKS
+	jwks = km.GetJWKS()
+	if len(jwks.Keys) != 2 {
+		t.Errorf("Expected 2 keys in JWKS after adding passive key, got %d", len(jwks.Keys))
+	}
+
+	// Verify active key is still the first one
+	if km.GetKeyID() != firstKeyID {
+		t.Errorf("Expected active key to still be %s, got %s", firstKeyID, km.GetKeyID())
+	}
+
+	// Promote the second key to ACTIVE
+	if err := km.PromoteKey(secondKeyID); err != nil {
+		t.Fatalf("Failed to promote key: %v", err)
+	}
+
+	// Verify active key is now the second one
+	if km.GetKeyID() != secondKeyID {
+		t.Errorf("Expected active key to be %s after promotion, got %s", secondKeyID, km.GetKeyID())
+	}
+
+	// Verify both keys are still in JWKS (old key should be PASSIVE now)
+	jwks = km.GetJWKS()
+	if len(jwks.Keys) != 2 {
+		t.Errorf("Expected 2 keys in JWKS after promotion, got %d", len(jwks.Keys))
+	}
+
+	// Retire the first key
+	if err := km.RetireKey(firstKeyID); err != nil {
+		t.Fatalf("Failed to retire key: %v", err)
+	}
+
+	// Verify only the second key is in JWKS
+	jwks = km.GetJWKS()
+	if len(jwks.Keys) != 1 {
+		t.Errorf("Expected 1 key in JWKS after retiring first key, got %d", len(jwks.Keys))
+	}
+	if jwks.Keys[0].Kid != secondKeyID {
+		t.Errorf("Expected remaining key to be %s, got %s", secondKeyID, jwks.Keys[0].Kid)
+	}
+}
+
+func TestKeyRotationWithTokenValidation(t *testing.T) {
+	km := &KeyManager{}
+
+	// Initialize with first key
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate initial key pair: %v", err)
+	}
+
+	// Create a token with the first key
+	userID := uuid.New().String()
+	config := TokenConfig{
+		PrivateKey:             km.GetPrivateKey(),
+		PublicKey:              km.GetPublicKey(),
+		KeyID:                  km.GetKeyID(),
+		Issuer:                 "test-issuer",
+		AccessTokenExpiration:  15 * time.Minute,
+		RefreshTokenExpiration: 7 * 24 * time.Hour,
+	}
+
+	tokenPair, err := NewTokenPair(userID, config)
+	if err != nil {
+		t.Fatalf("Failed to create token pair: %v", err)
+	}
+
+	// Verify token can be validated with first key
+	claims, err := ValidateAccessToken(tokenPair.AccessToken.Token, km.GetPublicKey())
+	if err != nil {
+		t.Fatalf("Failed to validate token with first key: %v", err)
+	}
+	if claims.UserID != userID {
+		t.Errorf("Expected user ID %s, got %s", userID, claims.UserID)
+	}
+
+	// Add a new key in PASSIVE state
+	secondKeyID, err := km.AddKeyPassive()
+	if err != nil {
+		t.Fatalf("Failed to add passive key: %v", err)
+	}
+
+	// Promote the second key to ACTIVE
+	if err := km.PromoteKey(secondKeyID); err != nil {
+		t.Fatalf("Failed to promote key: %v", err)
+	}
+
+	// Token signed with first key should still be valid (key is now PASSIVE)
+	// In a real scenario, we would extract kid from JWT header and use it to look up the key
+	// For this test, we just verify that both keys are still in JWKS
+	jwks := km.GetJWKS()
+	if len(jwks.Keys) != 2 {
+		t.Errorf("Expected 2 keys in JWKS after promotion, got %d", len(jwks.Keys))
+	}
+
+	// Create a new token with the second (now active) key
+	config.PrivateKey = km.GetPrivateKey()
+	config.PublicKey = km.GetPublicKey()
+	config.KeyID = km.GetKeyID()
+
+	newTokenPair, err := NewTokenPair(userID, config)
+	if err != nil {
+		t.Fatalf("Failed to create token pair with second key: %v", err)
+	}
+
+	// New token should be valid with second key
+	newClaims, err := ValidateAccessToken(newTokenPair.AccessToken.Token, km.GetPublicKey())
+	if err != nil {
+		t.Fatalf("Failed to validate token with second key: %v", err)
+	}
+	if newClaims.UserID != userID {
+		t.Errorf("Expected user ID %s in new token, got %s", userID, newClaims.UserID)
+	}
+}
+
+func TestKeyLifecycleErrors(t *testing.T) {
+	km := &KeyManager{}
+
+	// Try to promote a non-existent key
+	if err := km.PromoteKey("nonexistent"); err == nil {
+		t.Error("Expected error when promoting non-existent key")
+	}
+
+	// Try to retire a non-existent key
+	if err := km.RetireKey("nonexistent"); err == nil {
+		t.Error("Expected error when retiring non-existent key")
+	}
+
+	// Generate initial key
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate key pair: %v", err)
+	}
+	activeKeyID := km.GetKeyID()
+
+	// Try to promote an already ACTIVE key
+	if err := km.PromoteKey(activeKeyID); err == nil {
+		t.Error("Expected error when promoting already ACTIVE key")
+	}
+
+	// Try to retire an ACTIVE key
+	if err := km.RetireKey(activeKeyID); err == nil {
+		t.Error("Expected error when retiring ACTIVE key")
+	}
+
+	// Add passive key
+	passiveKeyID, err := km.AddKeyPassive()
+	if err != nil {
+		t.Fatalf("Failed to add passive key: %v", err)
+	}
+
+	// Retire passive key should succeed
+	if err := km.RetireKey(passiveKeyID); err != nil {
+		t.Errorf("Failed to retire passive key: %v", err)
+	}
+}
+
+func TestListKeys(t *testing.T) {
+	km := &KeyManager{}
+
+	// Initially empty
+	keys := km.ListKeys()
+	if len(keys) != 0 {
+		t.Errorf("Expected 0 keys initially, got %d", len(keys))
+	}
+
+	// Add first key
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate key pair: %v", err)
+	}
+
+	keys = km.ListKeys()
+	if len(keys) != 1 {
+		t.Errorf("Expected 1 key after generation, got %d", len(keys))
+	}
+	if keys[0].State != KeyStateActive {
+		t.Errorf("Expected first key to be ACTIVE, got %s", keys[0].State)
+	}
+
+	// Add passive key
+	passiveKeyID, err := km.AddKeyPassive()
+	if err != nil {
+		t.Fatalf("Failed to add passive key: %v", err)
+	}
+
+	keys = km.ListKeys()
+	if len(keys) != 2 {
+		t.Errorf("Expected 2 keys after adding passive key, got %d", len(keys))
+	}
+
+	// Verify states
+	activeCount := 0
+	passiveCount := 0
+	for _, k := range keys {
+		switch k.State {
+		case KeyStateActive:
+			activeCount++
+		case KeyStatePassive:
+			passiveCount++
+		}
+	}
+	if activeCount != 1 {
+		t.Errorf("Expected 1 ACTIVE key, got %d", activeCount)
+	}
+	if passiveCount != 1 {
+		t.Errorf("Expected 1 PASSIVE key, got %d", passiveCount)
+	}
+
+	// Promote passive key
+	if err := km.PromoteKey(passiveKeyID); err != nil {
+		t.Fatalf("Failed to promote key: %v", err)
+	}
+
+	keys = km.ListKeys()
+	activeCount = 0
+	passiveCount = 0
+	for _, k := range keys {
+		switch k.State {
+		case KeyStateActive:
+			activeCount++
+		case KeyStatePassive:
+			passiveCount++
+		}
+	}
+	if activeCount != 1 {
+		t.Errorf("Expected 1 ACTIVE key after promotion, got %d", activeCount)
+	}
+	if passiveCount != 1 {
+		t.Errorf("Expected 1 PASSIVE key after promotion, got %d", passiveCount)
+	}
+}
+
+func TestMultipleActiveKeyPrevention(t *testing.T) {
+	km := &KeyManager{}
+
+	// Generate first key
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate first key: %v", err)
+	}
+	firstKeyID := km.GetKeyID()
+
+	// Generate second key - should demote first
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate second key: %v", err)
+	}
+	secondKeyID := km.GetKeyID()
+
+	// Verify only one ACTIVE key
+	keys := km.ListKeys()
+	activeCount := 0
+	for _, k := range keys {
+		if k.State == KeyStateActive {
+			activeCount++
+			if k.KeyID != secondKeyID {
+				t.Errorf("Expected ACTIVE key to be %s, got %s", secondKeyID, k.KeyID)
+			}
+		}
+	}
+	if activeCount != 1 {
+		t.Errorf("Expected exactly 1 ACTIVE key, got %d", activeCount)
+	}
+
+	// Verify first key was demoted to PASSIVE
+	found := false
+	for _, k := range keys {
+		if k.KeyID == firstKeyID {
+			found = true
+			if k.State != KeyStatePassive {
+				t.Errorf("Expected first key to be PASSIVE, got %s", k.State)
+			}
+		}
+	}
+	if !found {
+		t.Error("First key not found in key ring")
+	}
+}
+
+func TestInitializeFromPEMWithExistingKey(t *testing.T) {
+	km := &KeyManager{}
+
+	// Generate initial key
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate initial key: %v", err)
+	}
+	firstKeyID := km.GetKeyID()
+
+	// Export and re-import (simulating loading from config)
+	pem, err := km.ExportPrivateKeyPEM()
+	if err != nil {
+		t.Fatalf("Failed to export PEM: %v", err)
+	}
+
+	// Create a new key and then initialize from PEM
+	newKm := &KeyManager{}
+	if err := newKm.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate key in new manager: %v", err)
+	}
+	tempKeyID := newKm.GetKeyID()
+
+	// Initialize from PEM - should demote the temp key
+	if err := newKm.InitializeFromPEM(pem); err != nil {
+		t.Fatalf("Failed to initialize from PEM: %v", err)
+	}
+
+	// Verify the PEM key is now ACTIVE
+	if newKm.GetKeyID() != firstKeyID {
+		t.Errorf("Expected ACTIVE key to be from PEM (%s), got %s", firstKeyID, newKm.GetKeyID())
+	}
+
+	// Verify temp key was demoted
+	keys := newKm.ListKeys()
+	activeCount := 0
+	for _, k := range keys {
+		if k.State == KeyStateActive {
+			activeCount++
+		}
+		if k.KeyID == tempKeyID && k.State != KeyStatePassive {
+			t.Errorf("Expected temp key to be PASSIVE, got %s", k.State)
+		}
+	}
+	if activeCount != 1 {
+		t.Errorf("Expected exactly 1 ACTIVE key after PEM init, got %d", activeCount)
+	}
+}
+
+func TestJWKSDeterministicOrder(t *testing.T) {
+	km := &KeyManager{}
+
+	// Add multiple keys in random order
+	if err := km.GenerateKeyPair(); err != nil {
+		t.Fatalf("Failed to generate first key: %v", err)
+	}
+
+	keyID2, err := km.AddKeyPassive()
+	if err != nil {
+		t.Fatalf("Failed to add second passive key: %v", err)
+	}
+
+	keyID3, err := km.AddKeyPassive()
+	if err != nil {
+		t.Fatalf("Failed to add third passive key: %v", err)
+	}
+
+	// Get JWKS multiple times and verify order is consistent
+	jwks1 := km.GetJWKS()
+	jwks2 := km.GetJWKS()
+	jwks3 := km.GetJWKS()
+
+	// Verify all responses have the same number of keys
+	if len(jwks1.Keys) != len(jwks2.Keys) || len(jwks1.Keys) != len(jwks3.Keys) {
+		t.Errorf("Inconsistent number of keys across JWKS responses")
+	}
+
+	// Verify the order is the same in all responses
+	for i := range jwks1.Keys {
+		if jwks1.Keys[i].Kid != jwks2.Keys[i].Kid {
+			t.Errorf("Key order differs between responses 1 and 2 at index %d: %s vs %s",
+				i, jwks1.Keys[i].Kid, jwks2.Keys[i].Kid)
+		}
+		if jwks1.Keys[i].Kid != jwks3.Keys[i].Kid {
+			t.Errorf("Key order differs between responses 1 and 3 at index %d: %s vs %s",
+				i, jwks1.Keys[i].Kid, jwks3.Keys[i].Kid)
+		}
+	}
+
+	// Verify keys are sorted (alphanumeric order)
+	for i := 1; i < len(jwks1.Keys); i++ {
+		if jwks1.Keys[i-1].Kid > jwks1.Keys[i].Kid {
+			t.Errorf("Keys are not sorted: %s > %s", jwks1.Keys[i-1].Kid, jwks1.Keys[i].Kid)
+		}
+	}
+
+	// Clean up - retire the passive keys
+	if err := km.RetireKey(keyID2); err != nil {
+		t.Fatalf("Failed to retire key: %v", err)
+	}
+	if err := km.RetireKey(keyID3); err != nil {
+		t.Fatalf("Failed to retire key: %v", err)
+	}
+}

@@ -54,7 +54,15 @@ func NewGateway(grpcEndpoint, staticDir, apiPrefix string) (*Gateway, error) {
 			}
 		}),
 		runtime.WithOutgoingHeaderMatcher(func(key string) (string, bool) {
-			return "", false
+			// Allow cache-related headers to pass through to HTTP response
+			switch strings.ToLower(key) {
+			case "cache-control":
+				return "Cache-Control", true
+			case "etag":
+				return "ETag", true
+			default:
+				return "", false
+			}
 		}),
 	)
 
