@@ -527,9 +527,10 @@ func TestListKeys(t *testing.T) {
 	activeCount := 0
 	passiveCount := 0
 	for _, k := range keys {
-		if k.State == KeyStateActive {
+		switch k.State {
+		case KeyStateActive:
 			activeCount++
-		} else if k.State == KeyStatePassive {
+		case KeyStatePassive:
 			passiveCount++
 		}
 	}
@@ -549,9 +550,10 @@ func TestListKeys(t *testing.T) {
 	activeCount = 0
 	passiveCount = 0
 	for _, k := range keys {
-		if k.State == KeyStateActive {
+		switch k.State {
+		case KeyStateActive:
 			activeCount++
-		} else if k.State == KeyStatePassive {
+		case KeyStatePassive:
 			passiveCount++
 		}
 	}
