@@ -19,7 +19,7 @@ plugins:
       - logtostderr=true
       - json_names_for_fields=false
       - allow_merge=true
-      - merge_file_name=llmgateway
+      - merge_file_name=identra
       - generate_unbound_methods=true
 inputs:
   - directory: proto

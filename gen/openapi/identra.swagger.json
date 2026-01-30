@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "identra/v1/identra_service.proto",
+    "title": "identra/v1/types.proto",
     "version": "version not set"
   },
   "tags": [

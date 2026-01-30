@@ -10,7 +10,7 @@ This repository provides **Identra**, an authentication + user management servic
 
 ## HTTP API (what an agent calls)
 
-The service interface is defined in `proto/identra/v1/identra_service.proto` and exported as OpenAPI at `gen/openapi/llmgateway.swagger.json`.
+The service interface is defined in `proto/identra/v1/identra_service.proto` and exported as OpenAPI at `gen/openapi/identra.swagger.json`.
 
 The gateway mounts the API under an **`/api/`** prefix, so routes below are typically reachable as:
 
