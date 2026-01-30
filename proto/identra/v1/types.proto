@@ -65,6 +65,10 @@ message LoginByOAuthRequest {
 }
 message LoginByOAuthResponse {
   TokenPair token = 1;
+  // Username from the OAuth provider (e.g., GitHub login name)
+  string username = 2;
+  // Avatar URL from the OAuth provider
+  string avatar_url = 3;
 }
 
 message BindUserByOAuthRequest {
@@ -78,6 +82,10 @@ message BindUserByOAuthRequest {
 message BindUserByOAuthResponse {
   // Updated token pair after binding completes
   TokenPair token = 1;
+  // Username from the OAuth provider (e.g., GitHub login name)
+  string username = 2;
+  // Avatar URL from the OAuth provider
+  string avatar_url = 3;
 }
 
 message SendLoginEmailCodeRequest {

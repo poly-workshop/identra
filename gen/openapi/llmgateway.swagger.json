@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "identra/v1/types.proto",
+    "title": "identra/v1/identra_service.proto",
     "version": "version not set"
   },
   "tags": [
@@ -353,6 +353,14 @@
         "token": {
           "$ref": "#/definitions/v1TokenPair",
           "title": "Updated token pair after binding completes"
+        },
+        "username": {
+          "type": "string",
+          "title": "Username from the OAuth provider (e.g., GitHub login name)"
+        },
+        "avatar_url": {
+          "type": "string",
+          "title": "Avatar URL from the OAuth provider"
         }
       }
     },
@@ -494,6 +502,14 @@
       "properties": {
         "token": {
           "$ref": "#/definitions/v1TokenPair"
+        },
+        "username": {
+          "type": "string",
+          "title": "Username from the OAuth provider (e.g., GitHub login name)"
+        },
+        "avatar_url": {
+          "type": "string",
+          "title": "Avatar URL from the OAuth provider"
         }
       }
     },

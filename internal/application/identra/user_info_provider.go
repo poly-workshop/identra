@@ -8,8 +8,10 @@ import (
 )
 
 type UserInfo struct {
-	ID    string
-	Email string
+	ID        string
+	Email     string
+	Username  string
+	AvatarURL string
 }
 
 type UserInfoProvider interface {
@@ -38,8 +40,10 @@ func (g *GitHubUserInfoProvider) GetUserInfo(ctx context.Context, token string) 
 		return UserInfo{}, err
 	}
 	return UserInfo{
-		ID:    fmt.Sprintf("%d", user.GetID()),
-		Email: user.GetEmail(),
+		ID:        fmt.Sprintf("%d", user.GetID()),
+		Email:     user.GetEmail(),
+		Username:  user.GetLogin(),
+		AvatarURL: user.GetAvatarURL(),
 	}, nil
 }
 

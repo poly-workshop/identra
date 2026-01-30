@@ -249,7 +249,11 @@ func (s *Service) LoginByOAuth(
 		return nil, status.Error(codes.Internal, "failed to create token pair")
 	}
 
-	return &identra_v1_pb.LoginByOAuthResponse{Token: tokenPair}, nil
+	return &identra_v1_pb.LoginByOAuthResponse{
+		Token:     tokenPair,
+		Username:  userInfo.Username,
+		AvatarUrl: userInfo.AvatarURL,
+	}, nil
 }
 
 func (s *Service) BindUserByOAuth(
@@ -339,7 +343,11 @@ func (s *Service) BindUserByOAuth(
 		return nil, status.Error(codes.Internal, "failed to create token pair")
 	}
 
-	return &identra_v1_pb.BindUserByOAuthResponse{Token: tokenPair}, nil
+	return &identra_v1_pb.BindUserByOAuthResponse{
+		Token:     tokenPair,
+		Username:  userInfo.Username,
+		AvatarUrl: userInfo.AvatarURL,
+	}, nil
 }
 
 func (s *Service) SendLoginEmailCode(
