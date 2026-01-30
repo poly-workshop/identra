@@ -190,6 +190,7 @@ curl http://localhost:8080/.well-known/jwks.json
 ```
 
 Response:
+
 ```json
 {
   "keys": [
@@ -208,6 +209,7 @@ Response:
 **Step 2: Validate JWT tokens using the public key**
 
 Example in Node.js:
+
 ```javascript
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
@@ -255,6 +257,7 @@ app.use(async (req, res, next) => {
 ```
 
 Example in Python:
+
 ```python
 from jose import jwt, jwk
 import requests
@@ -288,6 +291,7 @@ def verify_token(token):
 ```
 
 Example in Go:
+
 ```go
 package main
 
@@ -358,6 +362,7 @@ curl -X POST http://localhost:8080/me/login-info \
 ```
 
 Response:
+
 ```json
 {
   "user_id": "uuid-here",
@@ -400,7 +405,7 @@ await fetch('http://localhost:8080/oauth/bind', {
 
 ## API Reference
 
-For a complete API reference, see the OpenAPI specification at `gen/openapi/llmgateway.swagger.json` or the Protocol Buffer definitions in `proto/identra/v1/`.
+For a complete API reference, see the OpenAPI specification at `gen/openapi/identra.swagger.json` or the Protocol Buffer definitions in `proto/identra/v1/`.
 
 ### Main Endpoints
 
