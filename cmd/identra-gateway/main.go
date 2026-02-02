@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/poly-workshop/go-webmods/app"
+	"github.com/poly-workshop/identra/internal/pkg/app"
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"github.com/poly-workshop/identra/internal/infrastructure/configs"
 	"github.com/rs/cors"

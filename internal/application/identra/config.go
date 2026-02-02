@@ -3,10 +3,10 @@ package identra
 import (
 	"time"
 
-	gormclient "github.com/poly-workshop/go-webmods/gormclient"
-	mongoclient "github.com/poly-workshop/go-webmods/mongoclient"
-	redisclient "github.com/poly-workshop/go-webmods/redisclient"
-	smtpmailer "github.com/poly-workshop/go-webmods/smtpmailer"
+	"github.com/poly-workshop/identra/internal/pkg/gormclient"
+	"github.com/poly-workshop/identra/internal/pkg/mongoclient"
+	"github.com/poly-workshop/identra/internal/pkg/redisclient"
+	"github.com/poly-workshop/identra/internal/pkg/smtpmailer"
 )
 
 // Config holds all settings required to run the identra service.

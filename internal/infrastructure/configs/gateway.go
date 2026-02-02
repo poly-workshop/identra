@@ -1,6 +1,6 @@
 package configs
 
-import "github.com/poly-workshop/go-webmods/app"
+import "github.com/poly-workshop/identra/internal/pkg/app"
 
 type GatewayConfig struct {
 	HTTPPort uint

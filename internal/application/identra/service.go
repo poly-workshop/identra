@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	gormclient "github.com/poly-workshop/go-webmods/gormclient"
-	redisclient "github.com/poly-workshop/go-webmods/redisclient"
-	smtpmailer "github.com/poly-workshop/go-webmods/smtpmailer"
+	"github.com/poly-workshop/identra/internal/pkg/gormclient"
+	"github.com/poly-workshop/identra/internal/pkg/redisclient"
+	"github.com/poly-workshop/identra/internal/pkg/smtpmailer"
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"github.com/poly-workshop/identra/internal/domain"
 	"github.com/poly-workshop/identra/internal/infrastructure/cache"
