@@ -61,12 +61,17 @@ func NewCache(cfg CacheConfig) *Cache {
 		refreshEventChannel: refreshEventChannel,
 	}
 
-	// Subscribe cache refresh event
+	// Initialize pub/sub for cache refresh events.
+	// The Set operation is used to ensure the channel key exists in Redis
+	// before subscribing, which helps with initial connection validation.
 	ctx := context.Background()
 	_, err := cfg.Redis.Set(ctx, refreshEventChannel, refreshEventChannel, 0).Result()
 	if err != nil {
 		panic(err)
 	}
+
+	// Note: This goroutine runs for the lifetime of the application.
+	// For long-running services, this is the expected behavior.
 	go func() {
 		pubsub := cfg.Redis.Subscribe(ctx, refreshEventChannel)
 		defer func() {
