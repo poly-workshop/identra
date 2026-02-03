@@ -3,11 +3,11 @@ package configs
 import (
 	"time"
 
-	"github.com/poly-workshop/go-webmods/app"
-	gormclient "github.com/poly-workshop/go-webmods/gormclient"
-	"github.com/poly-workshop/go-webmods/mongoclient"
-	redisclient "github.com/poly-workshop/go-webmods/redisclient"
-	smtpmailer "github.com/poly-workshop/go-webmods/smtpmailer"
+	"github.com/poly-workshop/identra/internal/pkg/app"
+	"github.com/poly-workshop/identra/internal/pkg/gormclient"
+	"github.com/poly-workshop/identra/internal/pkg/mongoclient"
+	"github.com/poly-workshop/identra/internal/pkg/redisclient"
+	"github.com/poly-workshop/identra/internal/pkg/smtpmailer"
 )
 
 type GRPCConfig struct {

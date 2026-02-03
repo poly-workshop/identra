@@ -1,6 +1,6 @@
 package mail
 
-import smtpmailer "github.com/poly-workshop/go-webmods/smtpmailer"
+import "github.com/poly-workshop/identra/internal/pkg/smtpmailer"
 
 // Sender defines the interface for sending emails.
 type Sender interface {
