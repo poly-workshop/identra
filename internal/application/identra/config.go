@@ -3,10 +3,10 @@ package identra
 import (
 	"time"
 
-	"github.com/poly-workshop/identra/internal/pkg/gormclient"
-	"github.com/poly-workshop/identra/internal/pkg/mongoclient"
-	"github.com/poly-workshop/identra/internal/pkg/redisclient"
-	"github.com/poly-workshop/identra/internal/pkg/smtpmailer"
+	"github.com/poly-workshop/identra/internal/infrastructure/cache/redis"
+	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
+	"github.com/poly-workshop/identra/internal/infrastructure/persistence/gorm"
+	"github.com/poly-workshop/identra/internal/infrastructure/persistence/mongo"
 )
 
 // Config holds all settings required to run the identra service.
@@ -19,11 +19,11 @@ type Config struct {
 	AccessTokenExpirationDuration  time.Duration
 	RefreshTokenExpirationDuration time.Duration
 	TokenIssuer                    string
-	SmtpMailer                     smtpmailer.Config
+	SmtpMailer                     smtp.Config
 	DatabaseType                   string
-	GORMClient                     *gormclient.Config
-	MongoClient                    *mongoclient.Config
-	RedisClient                    *redisclient.Config
+	GORMClient                     *gorm.Config
+	MongoClient                    *mongo.Config
+	RedisClient                    *redis.Config
 	PresistenceType                string
 }
 

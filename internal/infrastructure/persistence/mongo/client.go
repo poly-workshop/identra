@@ -1,5 +1,5 @@
-// Package mongoclient provides a factory for creating MongoDB connections.
-package mongoclient
+// Package mongo provides a factory for creating MongoDB connections.
+package mongo
 
 import (
 	"context"

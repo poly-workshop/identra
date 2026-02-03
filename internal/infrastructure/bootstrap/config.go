@@ -1,5 +1,5 @@
-// Package app provides application initialization and configuration management.
-package app
+// Package bootstrap provides application initialization and configuration management.
+package bootstrap
 
 import (
 	"path"

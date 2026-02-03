@@ -1,5 +1,5 @@
-// Package gormclient provides a factory for creating GORM database connections.
-package gormclient
+// Package gorm provides a factory for creating GORM database connections.
+package gorm
 
 import (
 	"fmt"
