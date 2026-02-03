@@ -3,17 +3,17 @@ package configs
 import (
 	"time"
 
-	"github.com/poly-workshop/identra/internal/pkg/app"
-	"github.com/poly-workshop/identra/internal/pkg/gormclient"
-	"github.com/poly-workshop/identra/internal/pkg/mongoclient"
-	"github.com/poly-workshop/identra/internal/pkg/redisclient"
-	"github.com/poly-workshop/identra/internal/pkg/smtpmailer"
+	"github.com/poly-workshop/identra/internal/infrastructure/bootstrap"
+	"github.com/poly-workshop/identra/internal/infrastructure/cache/redis"
+	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
+	"github.com/poly-workshop/identra/internal/infrastructure/persistence/gorm"
+	"github.com/poly-workshop/identra/internal/infrastructure/persistence/mongo"
 )
 
 type GRPCConfig struct {
 	GRPCPort    uint
-	Redis       redisclient.Config
-	SmtpMailer  smtpmailer.Config
+	Redis       redis.Config
+	SmtpMailer  smtp.Config
 	Persistence PersistenceConfig
 	Auth        AuthConfig
 }
@@ -39,8 +39,8 @@ type TokenConfig struct {
 
 type PersistenceConfig struct {
 	Type  string
-	GORM  *gormclient.Config
-	Mongo *mongoclient.Config
+	GORM  *gorm.Config
+	Mongo *mongo.Config
 }
 
 const (
@@ -52,47 +52,47 @@ const (
 
 func LoadGRPC() GRPCConfig {
 	cfg := GRPCConfig{
-		GRPCPort: app.Config().GetUint(GRPCPortKey),
-		SmtpMailer: smtpmailer.Config{
-			Host:      app.Config().GetString(SmtpMailerHostKey),
-			Port:      app.Config().GetInt(SmtpMailerPortKey),
-			Username:  app.Config().GetString(SmtpMailerUsernameKey),
-			Password:  app.Config().GetString(SmtpMailerPasswordKey),
-			FromEmail: app.Config().GetString(SmtpMailerFromEmailKey),
-			FromName:  app.Config().GetString(SmtpMailerFromNameKey),
+		GRPCPort: bootstrap.Config().GetUint(GRPCPortKey),
+		SmtpMailer: smtp.Config{
+			Host:      bootstrap.Config().GetString(SmtpMailerHostKey),
+			Port:      bootstrap.Config().GetInt(SmtpMailerPortKey),
+			Username:  bootstrap.Config().GetString(SmtpMailerUsernameKey),
+			Password:  bootstrap.Config().GetString(SmtpMailerPasswordKey),
+			FromEmail: bootstrap.Config().GetString(SmtpMailerFromEmailKey),
+			FromName:  bootstrap.Config().GetString(SmtpMailerFromNameKey),
 		},
 		Persistence: PersistenceConfig{
-			Type: app.Config().GetString(PersistenceTypeKey),
-			GORM: &gormclient.Config{
-				Driver:   app.Config().GetString(PersistenceGORMDriverKey),
-				Host:     app.Config().GetString(PersistenceGORMHostKey),
-				Port:     app.Config().GetInt(PersistenceGORMPortKey),
-				Username: app.Config().GetString(PersistenceGORMUsernameKey),
-				Password: app.Config().GetString(PersistenceGORMPasswordKey),
-				DbName:   app.Config().GetString(PersistenceGORMNameKey),
-				SSLMode:  app.Config().GetString(PersistenceGORMSSLModeKey),
+			Type: bootstrap.Config().GetString(PersistenceTypeKey),
+			GORM: &gorm.Config{
+				Driver:   bootstrap.Config().GetString(PersistenceGORMDriverKey),
+				Host:     bootstrap.Config().GetString(PersistenceGORMHostKey),
+				Port:     bootstrap.Config().GetInt(PersistenceGORMPortKey),
+				Username: bootstrap.Config().GetString(PersistenceGORMUsernameKey),
+				Password: bootstrap.Config().GetString(PersistenceGORMPasswordKey),
+				DbName:   bootstrap.Config().GetString(PersistenceGORMNameKey),
+				SSLMode:  bootstrap.Config().GetString(PersistenceGORMSSLModeKey),
 			},
-			Mongo: &mongoclient.Config{
-				URI:      app.Config().GetString(PersistenceMongoURIKey),
-				Database: app.Config().GetString(PersistenceMongoDatabaseKey),
+			Mongo: &mongo.Config{
+				URI:      bootstrap.Config().GetString(PersistenceMongoURIKey),
+				Database: bootstrap.Config().GetString(PersistenceMongoDatabaseKey),
 			},
 		},
-		Redis: redisclient.Config{
-			Urls:     app.Config().GetStringSlice(RedisUrlsKey),
-			Password: app.Config().GetString(RedisPasswordKey),
+		Redis: redis.Config{
+			Urls:     bootstrap.Config().GetStringSlice(RedisUrlsKey),
+			Password: bootstrap.Config().GetString(RedisPasswordKey),
 		},
 		Auth: AuthConfig{
-			RSAPrivateKey: app.Config().GetString(AuthRSAPrivateKeyKey),
+			RSAPrivateKey: bootstrap.Config().GetString(AuthRSAPrivateKeyKey),
 			OAuth: OAuthConfig{
-				StateExpirationDuration: app.Config().GetDuration(AuthOAuthStateExpirationKey),
-				GithubClientID:          app.Config().GetString(AuthGithubClientIDKey),
-				GithubClientSecret:      app.Config().GetString(AuthGithubClientSecretKey),
-				FetchEmailIfMissing:     app.Config().GetBool(AuthOAuthFetchEmailIfMissingKey),
+				StateExpirationDuration: bootstrap.Config().GetDuration(AuthOAuthStateExpirationKey),
+				GithubClientID:          bootstrap.Config().GetString(AuthGithubClientIDKey),
+				GithubClientSecret:      bootstrap.Config().GetString(AuthGithubClientSecretKey),
+				FetchEmailIfMissing:     bootstrap.Config().GetBool(AuthOAuthFetchEmailIfMissingKey),
 			},
 			Token: TokenConfig{
-				Issuer:                 app.Config().GetString(AuthTokenIssuerKey),
-				AccessTokenExpiration:  app.Config().GetDuration(AuthAccessTokenExpirationKey),
-				RefreshTokenExpiration: app.Config().GetDuration(AuthRefreshTokenExpirationKey),
+				Issuer:                 bootstrap.Config().GetString(AuthTokenIssuerKey),
+				AccessTokenExpiration:  bootstrap.Config().GetDuration(AuthAccessTokenExpirationKey),
+				RefreshTokenExpiration: bootstrap.Config().GetDuration(AuthRefreshTokenExpirationKey),
 			},
 		},
 	}

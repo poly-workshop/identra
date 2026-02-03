@@ -1,5 +1,5 @@
-// Package smtpmailer provides SMTP email sending functionality.
-package smtpmailer
+// Package smtp provides SMTP email sending functionality.
+package smtp
 
 import (
 	"crypto/tls"

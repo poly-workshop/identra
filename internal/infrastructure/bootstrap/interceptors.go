@@ -1,13 +1,12 @@
-// Package grpcutils provides gRPC server interceptors for logging and request
+// Package bootstrap provides gRPC server interceptors for logging and request
 // ID tracking with context propagation.
-package grpcutils
+package bootstrap
 
 import (
 	"context"
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/poly-workshop/identra/internal/pkg/app"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -34,7 +33,7 @@ func BuildRequestIDInterceptor() grpc.UnaryServerInterceptor {
 			requestID = uuid.New().String()
 		}
 
-		ctx = app.WithLogAttrs(ctx, slog.String("request_id", requestID))
+		ctx = WithLogAttrs(ctx, slog.String("request_id", requestID))
 
 		// Call the handler
 		resp, err := handler(ctx, req)

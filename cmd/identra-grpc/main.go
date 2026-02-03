@@ -8,10 +8,9 @@ import (
 	"net"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
-	"github.com/poly-workshop/identra/internal/pkg/app"
-	"github.com/poly-workshop/identra/internal/pkg/grpcutils"
-	"github.com/poly-workshop/identra/internal/pkg/redisclient"
-	"github.com/poly-workshop/identra/internal/pkg/smtpmailer"
+	"github.com/poly-workshop/identra/internal/infrastructure/bootstrap"
+	"github.com/poly-workshop/identra/internal/infrastructure/cache/redis"
+	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"github.com/poly-workshop/identra/internal/application/identra"
 	"github.com/poly-workshop/identra/internal/infrastructure/configs"
@@ -20,7 +19,7 @@ import (
 )
 
 func init() {
-	app.Init("grpc")
+	bootstrap.Init("grpc")
 }
 
 // InterceptorLogger adapts slog logger to interceptor logger.
@@ -52,7 +51,7 @@ func main() {
 	// Setup gRPC server with auth interceptor
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			grpcutils.BuildRequestIDInterceptor(),
+			bootstrap.BuildRequestIDInterceptor(),
 			logging.UnaryServerInterceptor(InterceptorLogger(slog.Default())),
 		),
 	)
@@ -73,8 +72,8 @@ func main() {
 
 func toIdentraConfig(
 	authCfg configs.AuthConfig,
-	redisCfg redisclient.Config,
-	mailerCfg smtpmailer.Config,
+	redisCfg redis.Config,
+	mailerCfg smtp.Config,
 	presistenceCfg configs.PersistenceConfig,
 ) identra.Config {
 	return identra.Config{

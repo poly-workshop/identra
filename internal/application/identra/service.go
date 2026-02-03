@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/poly-workshop/identra/internal/pkg/gormclient"
-	"github.com/poly-workshop/identra/internal/pkg/redisclient"
-	"github.com/poly-workshop/identra/internal/pkg/smtpmailer"
+	"github.com/poly-workshop/identra/internal/infrastructure/cache/redis"
+	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
+	"github.com/poly-workshop/identra/internal/infrastructure/persistence/gorm"
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"github.com/poly-workshop/identra/internal/domain"
 	"github.com/poly-workshop/identra/internal/infrastructure/cache"
@@ -47,19 +47,19 @@ type Service struct {
 	tokenCfg                 security.TokenConfig
 	githubOAuthConfig        *oauth2.Config
 	oauthFetchEmailIfMissing bool
-	mailer                   *smtpmailer.Mailer
+	mailer                   *smtp.Mailer
 }
 
 func NewService(ctx context.Context, cfg Config) (*Service, error) {
 	mailerCfg := cfg.SmtpMailer
-	var mailer *smtpmailer.Mailer
+	var mailer *smtp.Mailer
 
 	if strings.TrimSpace(mailerCfg.Host) != "" {
 		if err := validateMailerConfig(mailerCfg); err != nil {
 			return nil, fmt.Errorf("invalid mailer config: %w", err)
 		}
 
-		mailer = smtpmailer.NewMailer(mailerCfg)
+		mailer = smtp.NewMailer(mailerCfg)
 	}
 
 	km := security.GetKeyManager()
@@ -103,7 +103,7 @@ func NewService(ctx context.Context, cfg Config) (*Service, error) {
 		Endpoint:     github.Endpoint,
 	}
 
-	emailStore, storeErr := cache.NewRedisEmailCodeStore(10*time.Minute, redisclient.NewRDB(*cfg.RedisClient))
+	emailStore, storeErr := cache.NewRedisEmailCodeStore(10*time.Minute, redis.NewRDB(*cfg.RedisClient))
 	if storeErr != nil {
 		return nil, fmt.Errorf("failed to initialize email code store: %w", storeErr)
 	}
@@ -420,7 +420,7 @@ func (s *Service) sendVerificationCode(to string, code string, expiryMinutes int
 </html>
 `, code, expiryMinutes)
 
-		return s.mailer.SendEmail(smtpmailer.Message{
+		return s.mailer.SendEmail(smtp.Message{
 			ToEmails: []string{to},
 			Subject:  subject,
 			Body:     htmlBody,
@@ -429,7 +429,7 @@ func (s *Service) sendVerificationCode(to string, code string, expiryMinutes int
 	}
 
 	body := fmt.Sprintf("Your verification code is: %s (valid for %d minutes)", code, expiryMinutes)
-	return s.mailer.SendEmail(smtpmailer.Message{
+	return s.mailer.SendEmail(smtp.Message{
 		ToEmails: []string{to},
 		Subject:  subject,
 		Body:     body,
@@ -437,7 +437,7 @@ func (s *Service) sendVerificationCode(to string, code string, expiryMinutes int
 	})
 }
 
-func validateMailerConfig(cfg smtpmailer.Config) error {
+func validateMailerConfig(cfg smtp.Config) error {
 	if strings.TrimSpace(cfg.Host) == "" {
 		return nil
 	}
@@ -718,7 +718,7 @@ func buildUserStore(ctx context.Context, cfg Config) (domain.UserStore, func(con
 		}
 		return repo, cleanup, nil
 	case "", "gorm", "postgres", "mysql", "sqlite":
-		db := gormclient.NewDB(*cfg.GORMClient)
+		db := gorm.NewDB(*cfg.GORMClient)
 		if err := db.AutoMigrate(&domain.UserModel{}); err != nil {
 			slog.Error("failed to migrate database", "error", err)
 		}

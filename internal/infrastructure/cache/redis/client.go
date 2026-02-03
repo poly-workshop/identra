@@ -1,5 +1,5 @@
-// Package redisclient provides a factory for creating Redis connections.
-package redisclient
+// Package redis provides a factory for creating Redis connections.
+package redis
 
 import (
 	"github.com/redis/go-redis/v9"

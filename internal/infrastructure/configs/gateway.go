@@ -1,6 +1,6 @@
 package configs
 
-import "github.com/poly-workshop/identra/internal/pkg/app"
+import "github.com/poly-workshop/identra/internal/infrastructure/bootstrap"
 
 type GatewayConfig struct {
 	HTTPPort uint
@@ -8,6 +8,6 @@ type GatewayConfig struct {
 
 func LoadGateway() GatewayConfig {
 	return GatewayConfig{
-		HTTPPort: app.Config().GetUint(HTTPPortKey),
+		HTTPPort: bootstrap.Config().GetUint(HTTPPortKey),
 	}
 }
