@@ -23,7 +23,7 @@ const (
 	PersistenceGORMPortKey        = "persistence.gorm.port"
 	PersistenceGORMUsernameKey    = "persistence.gorm.username"
 	PersistenceGORMPasswordKey    = "persistence.gorm.password"
-	PersistenceGORMNameKey        = "persistence.gorm.name"
+	PersistenceGORMDBNameKey      = "persistence.gorm.dbname"
 	PersistenceGORMSSLModeKey     = "persistence.gorm.sslmode"
 	PersistenceMongoURIKey        = "persistence.mongo.uri"
 	PersistenceMongoDatabaseKey   = "persistence.mongo.database"

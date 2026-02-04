@@ -69,7 +69,7 @@ func LoadGRPC() GRPCConfig {
 				Port:     bootstrap.Config().GetInt(PersistenceGORMPortKey),
 				Username: bootstrap.Config().GetString(PersistenceGORMUsernameKey),
 				Password: bootstrap.Config().GetString(PersistenceGORMPasswordKey),
-				DbName:   bootstrap.Config().GetString(PersistenceGORMNameKey),
+				DbName:   bootstrap.Config().GetString(PersistenceGORMDBNameKey),
 				SSLMode:  bootstrap.Config().GetString(PersistenceGORMSSLModeKey),
 			},
 			Mongo: &mongo.Config{
