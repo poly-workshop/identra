@@ -8,11 +8,6 @@ token_expiration = "24h"
 [redis]
 urls = "localhost:6379"
 
-[gorm_client.database]
-driver = "sqlite"
-name = "data/users.db"
-sslmode = "disable"
-
 [presistence]
 type = "gorm"
 
