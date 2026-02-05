@@ -27,6 +27,7 @@ func Init(cmd string) {
 	workdir, _ := os.Getwd()
 	initConfig(path.Join(workdir, "configs"))
 	initLog()
+	logConfig()
 	slog.Info("APP initialized")
 }
 
@@ -39,5 +40,6 @@ func InitWithConfigPath(cmd string, configPath string) {
 	}
 	initConfig(configPath)
 	initLog()
+	logConfig()
 	slog.Info("APP initialized")
 }
