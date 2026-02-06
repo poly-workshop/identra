@@ -14,9 +14,10 @@ func logConfig() {
 	)
 
 	// Log server configuration based on the command
-	if cmdName == "grpc" {
+	switch cmdName {
+	case "grpc":
 		logGRPCConfig()
-	} else if cmdName == "gateway" {
+	case "gateway":
 		logGatewayConfig()
 	}
 }
