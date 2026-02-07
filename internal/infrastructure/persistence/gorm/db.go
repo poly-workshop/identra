@@ -23,8 +23,23 @@ type Config struct {
 	SSLMode  string
 }
 
+// Validate checks that the configuration is valid for the specified driver.
+// For postgres and mysql drivers, username must not be empty.
+func (c Config) Validate() error {
+	switch c.Driver {
+	case "postgres", "mysql":
+		if c.Username == "" {
+			return fmt.Errorf("username is required for %s driver", c.Driver)
+		}
+	}
+	return nil
+}
+
 // NewDB creates a new GORM database connection based on the configuration.
 func NewDB(cfg Config) *gorm.DB {
+	if err := cfg.Validate(); err != nil {
+		panic(err)
+	}
 	driver := cfg.Driver
 	switch driver {
 	case "postgres":
