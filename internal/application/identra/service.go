@@ -646,7 +646,8 @@ func (s *Service) ensureOAuthUser(ctx context.Context, info UserInfo) (*domain.U
 				return nil, status.Error(codes.Internal, "failed to fetch user by email")
 			}
 		}
-		// No email provided, create a new user without email (GitHub ID only)
+		// No email provided from OAuth provider, create user with GitHub ID only.
+		// Email is intentionally left as empty string (default value).
 		userModel := &domain.UserModel{GithubID: &info.ID}
 		if createErr := s.userStore.Create(ctx, userModel); createErr != nil {
 			return nil, status.Error(codes.Internal, "failed to create user")
