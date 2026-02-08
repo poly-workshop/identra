@@ -47,8 +47,11 @@ func NewMongoUserStore(
 func (r *mongoUserStore) ensureIndexes(ctx context.Context) error {
 	models := []mongo.IndexModel{
 		{
-			Keys:    bson.D{{Key: "email", Value: 1}},
-			Options: options.Index().SetUnique(true).SetName("idx_email_unique"),
+			Keys: bson.D{{Key: "email", Value: 1}},
+			// Sparse index allows multiple documents with NULL/empty email values
+			// while maintaining uniqueness constraint for non-empty values.
+			// This enables OAuth users without email to be created.
+			Options: options.Index().SetUnique(true).SetSparse(true).SetName("idx_email_unique"),
 		},
 		{
 			Keys:    bson.D{{Key: "github_id", Value: 1}},
