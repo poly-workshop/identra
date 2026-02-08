@@ -510,6 +510,10 @@
         "avatar_url": {
           "type": "string",
           "title": "Avatar URL from the OAuth provider"
+        },
+        "email": {
+          "type": "string",
+          "title": "Email from the OAuth provider (if available)"
         }
       }
     },

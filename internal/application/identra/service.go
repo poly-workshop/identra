@@ -253,6 +253,7 @@ func (s *Service) LoginByOAuth(
 		Token:     tokenPair,
 		Username:  userInfo.Username,
 		AvatarUrl: userInfo.AvatarURL,
+		Email:     userInfo.Email,
 	}, nil
 }
 

@@ -501,7 +501,9 @@ type LoginByOAuthResponse struct {
 	// Username from the OAuth provider (e.g., GitHub login name)
 	Username string `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
 	// Avatar URL from the OAuth provider
-	AvatarUrl     string `protobuf:"bytes,3,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	AvatarUrl string `protobuf:"bytes,3,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	// Email from the OAuth provider (if available)
+	Email         string `protobuf:"bytes,4,opt,name=email,proto3" json:"email,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -553,6 +555,13 @@ func (x *LoginByOAuthResponse) GetUsername() string {
 func (x *LoginByOAuthResponse) GetAvatarUrl() string {
 	if x != nil {
 		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *LoginByOAuthResponse) GetEmail() string {
+	if x != nil {
+		return x.Email
 	}
 	return ""
 }
@@ -1275,12 +1284,13 @@ const file_identra_v1_types_proto_rawDesc = "" +
 	"\x05state\x18\x02 \x01(\tR\x05state\"?\n" +
 	"\x13LoginByOAuthRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x14\n" +
-	"\x05state\x18\x02 \x01(\tR\x05state\"~\n" +
+	"\x05state\x18\x02 \x01(\tR\x05state\"\x94\x01\n" +
 	"\x14LoginByOAuthResponse\x12+\n" +
 	"\x05token\x18\x01 \x01(\v2\x15.identra.v1.TokenPairR\x05token\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x1d\n" +
 	"\n" +
-	"avatar_url\x18\x03 \x01(\tR\tavatarUrl\"e\n" +
+	"avatar_url\x18\x03 \x01(\tR\tavatarUrl\x12\x14\n" +
+	"\x05email\x18\x04 \x01(\tR\x05email\"e\n" +
 	"\x16BindUserByOAuthRequest\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x14\n" +
