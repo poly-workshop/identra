@@ -624,28 +624,34 @@ func (s *Service) ensureOAuthUser(ctx context.Context, info UserInfo) (*domain.U
 	case err == nil:
 		return s.updateEmailIfNeeded(ctx, existing, info.Email)
 	case errors.Is(err, domain.ErrNotFound):
-		// If user is not linked by provider id, we need email to link by email or create a new user.
+		// If user is not linked by provider id, try to link by email if available.
 		// (Email may be missing for some OAuth users, depending on provider settings / privacy.)
-		if strings.TrimSpace(info.Email) == "" {
-			return nil, status.Error(codes.FailedPrecondition, "email is required to create or link user")
-		}
-		byEmail, emailErr := s.userStore.GetByEmail(ctx, info.Email)
-		switch {
-		case emailErr == nil:
-			byEmail.GithubID = &info.ID
-			if updateErr := s.userStore.Update(ctx, byEmail); updateErr != nil {
-				return nil, status.Error(codes.Internal, "failed to link github account")
+		if strings.TrimSpace(info.Email) != "" {
+			byEmail, emailErr := s.userStore.GetByEmail(ctx, info.Email)
+			switch {
+			case emailErr == nil:
+				byEmail.GithubID = &info.ID
+				if updateErr := s.userStore.Update(ctx, byEmail); updateErr != nil {
+					return nil, status.Error(codes.Internal, "failed to link github account")
+				}
+				return byEmail, nil
+			case errors.Is(emailErr, domain.ErrNotFound):
+				// Email is provided but no existing user, create a new one
+				userModel := &domain.UserModel{Email: info.Email, GithubID: &info.ID}
+				if createErr := s.userStore.Create(ctx, userModel); createErr != nil {
+					return nil, status.Error(codes.Internal, "failed to create user")
+				}
+				return userModel, nil
+			default:
+				return nil, status.Error(codes.Internal, "failed to fetch user by email")
 			}
-			return byEmail, nil
-		case errors.Is(emailErr, domain.ErrNotFound):
-			userModel := &domain.UserModel{Email: info.Email, GithubID: &info.ID}
-			if createErr := s.userStore.Create(ctx, userModel); createErr != nil {
-				return nil, status.Error(codes.Internal, "failed to create user")
-			}
-			return userModel, nil
-		default:
-			return nil, status.Error(codes.Internal, "failed to fetch user by email")
 		}
+		// No email provided, create a new user without email
+		userModel := &domain.UserModel{Email: "", GithubID: &info.ID}
+		if createErr := s.userStore.Create(ctx, userModel); createErr != nil {
+			return nil, status.Error(codes.Internal, "failed to create user")
+		}
+		return userModel, nil
 	default:
 		return nil, status.Error(codes.Internal, "failed to fetch user by provider id")
 	}
