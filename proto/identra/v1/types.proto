@@ -69,6 +69,8 @@ message LoginByOAuthResponse {
   string username = 2;
   // Avatar URL from the OAuth provider
   string avatar_url = 3;
+  // Email from the OAuth provider (if available)
+  string email = 4;
 }
 
 message BindUserByOAuthRequest {
