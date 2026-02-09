@@ -18,7 +18,7 @@ type UserModel struct {
 	CreatedAt        time.Time      `bson:"created_at,omitempty" json:"created_at"`
 	UpdatedAt        time.Time      `bson:"updated_at,omitempty" json:"updated_at"`
 	DeletedAt        gorm.DeletedAt `gorm:"index" bson:"-" json:"-"`
-	Email            string         `gorm:"type:varchar(255);uniqueIndex;not null" bson:"email" json:"email"`
+	Email            string         `gorm:"type:varchar(255);uniqueIndex" bson:"email" json:"email"`
 	HashedPassword   *string        `gorm:"column:hashed_password"                 bson:"hashed_password,omitempty" json:"-"`
 	VerificationHash *string        `gorm:"column:hash"                            bson:"hash,omitempty" json:"-"`
 	GithubID         *string        `gorm:"column:github_id;unique"                bson:"github_id,omitempty" json:"github_id"`
