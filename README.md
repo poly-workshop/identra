@@ -440,6 +440,8 @@ password = "secure_password"
 sslmode = "require"
 ```
 
+For PostgreSQL and MySQL, Identra will automatically create the configured database if it does not already exist. The database user must have the necessary privileges to create databases. SQLite databases are always created automatically.
+
 ### Production Deployment
 
 1. **Use environment variables** for sensitive configuration

@@ -79,3 +79,79 @@ func TestConfigValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestQuotePostgresIdentifier(t *testing.T) {
+	tests := []struct {
+		name string
+		input string
+		want string
+	}{
+		{
+			name:  "simple name",
+			input: "identra",
+			want:  `"identra"`,
+		},
+		{
+			name:  "name with double quote",
+			input: `my"db`,
+			want:  `"my""db"`,
+		},
+		{
+			name:  "name with spaces",
+			input: "my database",
+			want:  `"my database"`,
+		},
+		{
+			name:  "name with special chars",
+			input: "my-db_123",
+			want:  `"my-db_123"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := quotePostgresIdentifier(tt.input)
+			if got != tt.want {
+				t.Errorf("quotePostgresIdentifier(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestQuoteMysqlIdentifier(t *testing.T) {
+	tests := []struct {
+		name string
+		input string
+		want string
+	}{
+		{
+			name:  "simple name",
+			input: "identra",
+			want:  "`identra`",
+		},
+		{
+			name:  "name with backtick",
+			input: "my`db",
+			want:  "`my``db`",
+		},
+		{
+			name:  "name with spaces",
+			input: "my database",
+			want:  "`my database`",
+		},
+		{
+			name:  "name with special chars",
+			input: "my-db_123",
+			want:  "`my-db_123`",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := quoteMysqlIdentifier(tt.input)
+			if got != tt.want {
+				t.Errorf("quoteMysqlIdentifier(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
