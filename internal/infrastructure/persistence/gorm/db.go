@@ -99,9 +99,7 @@ func ensurePostgresDatabase(cfg Config) {
 		cfg.Password,
 		cfg.SSLMode,
 	)
-	adminDB, err := gorm.Open(postgres.Open(adminDSN), &gorm.Config{
-		Logger: nil,
-	})
+	adminDB, err := gorm.Open(postgres.Open(adminDSN), &gorm.Config{})
 	if err != nil {
 		slog.Warn("could not connect to postgres to ensure database exists", "error", err)
 		return
@@ -160,9 +158,7 @@ func ensureMysqlDatabase(cfg Config) {
 		cfg.Host,
 		cfg.Port,
 	)
-	adminDB, err := gorm.Open(mysql.Open(adminDSN), &gorm.Config{
-		Logger: nil,
-	})
+	adminDB, err := gorm.Open(mysql.Open(adminDSN), &gorm.Config{})
 	if err != nil {
 		slog.Warn("could not connect to mysql to ensure database exists", "error", err)
 		return
