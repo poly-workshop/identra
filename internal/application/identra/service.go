@@ -170,6 +170,34 @@ func generateJWKSETag(jwks *identra_v1_pb.GetJWKSResponse) string {
 	return fmt.Sprintf(`"%x"`, hash[:])
 }
 
+func (s *Service) ListOAuthProviders(
+	_ context.Context,
+	_ *identra_v1_pb.ListOAuthProvidersRequest,
+) (*identra_v1_pb.ListOAuthProvidersResponse, error) {
+	var providers []*identra_v1_pb.OAuthProviderStatus
+
+	for name := range supportedProviders {
+		ps := &identra_v1_pb.OAuthProviderStatus{Name: name}
+
+		switch name {
+		case "github":
+			if s.githubOAuthConfig.ClientID == "" {
+				reason := "missing_client_id"
+				ps.Reason = &reason
+			} else if s.githubOAuthConfig.ClientSecret == "" {
+				reason := "missing_client_secret"
+				ps.Reason = &reason
+			} else {
+				ps.Enabled = true
+			}
+		}
+
+		providers = append(providers, ps)
+	}
+
+	return &identra_v1_pb.ListOAuthProvidersResponse{Providers: providers}, nil
+}
+
 func (s *Service) GetOAuthAuthorizationURL(
 	ctx context.Context,
 	req *identra_v1_pb.GetOAuthAuthorizationURLRequest,
