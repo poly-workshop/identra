@@ -86,7 +86,7 @@ func toIdentraConfig(
 		RefreshTokenExpirationDuration: authCfg.Token.RefreshTokenExpiration,
 		TokenIssuer:                    authCfg.Token.Issuer,
 		SmtpMailer:                     mailerCfg,
-		PresistenceType:                presistenceCfg.Type,
+		PersistenceType:                presistenceCfg.Type,
 		GORMClient:                     presistenceCfg.GORM,
 		MongoClient:                    presistenceCfg.Mongo,
 		RedisClient:                    &redisCfg,

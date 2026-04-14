@@ -20,11 +20,10 @@ type Config struct {
 	RefreshTokenExpirationDuration time.Duration
 	TokenIssuer                    string
 	SmtpMailer                     smtp.Config
-	DatabaseType                   string
+	PersistenceType                string
 	GORMClient                     *gorm.Config
 	MongoClient                    *mongo.Config
 	RedisClient                    *redis.Config
-	PresistenceType                string
 }
 
 const (
