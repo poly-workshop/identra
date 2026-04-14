@@ -115,9 +115,8 @@ Identra provides both HTTP and gRPC interfaces.
 
 #### Option 1: HTTP REST API
 
-Use the HTTP gateway for browser and backend integrations. Use the `/api/` prefix to stay compatible with
-setups that also serve frontend assets. When no frontend assets are present, the same routes may also be
-reachable without `/api`.
+Use the HTTP gateway for browser and backend integrations. Clients should use the `/api/` prefix for all
+HTTP requests.
 
 **Base URL**: `http://localhost:8080/api`
 
@@ -368,7 +367,7 @@ async function refreshAccessToken(refreshToken) {
 
 ### Getting User Information
 
-Identra currently expects the access token in the JSON body for its own authenticated endpoints such as
+Identra expects the access token in the JSON body for its own authenticated endpoints such as
 `/me/login-info` and `/oauth/bind`.
 
 ```bash
