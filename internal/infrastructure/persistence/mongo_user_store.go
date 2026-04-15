@@ -71,6 +71,9 @@ func (r *mongoUserStore) Create(ctx context.Context, user *domain.UserModel) err
 
 	if _, err := r.coll.InsertOne(ctx, user); err != nil {
 		slog.ErrorContext(ctx, "failed to create user (mongo)", "error", err, "email", user.Email)
+		if mongo.IsDuplicateKeyError(err) {
+			return domain.ErrAlreadyExists
+		}
 		return err
 	}
 	slog.InfoContext(ctx, "user created successfully (mongo)", "user_id", user.ID, "email", user.Email)

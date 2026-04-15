@@ -26,6 +26,9 @@ func wrapGormError(err error) error {
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return domain.ErrNotFound
 	}
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return domain.ErrAlreadyExists
+	}
 	return err
 }
 
@@ -33,7 +36,7 @@ func (r *gormUserStore) Create(ctx context.Context, user *domain.UserModel) erro
 	err := r.db.WithContext(ctx).Create(user).Error
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to create user", "error", err, "email", user.Email)
-		return err
+		return wrapGormError(err)
 	}
 	slog.InfoContext(
 		ctx,

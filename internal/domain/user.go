@@ -12,6 +12,9 @@ import (
 // ErrNotFound is returned when a resource is not found.
 var ErrNotFound = errors.New("resource not found")
 
+// ErrAlreadyExists is returned when a resource with the same unique key already exists.
+var ErrAlreadyExists = errors.New("resource already exists")
+
 // UserModel represents a user entity in the system.
 type UserModel struct {
 	ID               string         `gorm:"type:varchar(36);primaryKey" bson:"_id,omitempty" json:"id"`

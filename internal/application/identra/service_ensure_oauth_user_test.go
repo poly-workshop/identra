@@ -9,7 +9,8 @@ import (
 
 // mockUserStore is a simple in-memory user store for testing.
 type mockUserStore struct {
-	users map[string]*domain.UserModel
+	users          map[string]*domain.UserModel
+	forceCreateErr error // when set, Create returns this error instead of storing the user
 }
 
 func newMockUserStore() *mockUserStore {
@@ -19,6 +20,9 @@ func newMockUserStore() *mockUserStore {
 }
 
 func (m *mockUserStore) Create(ctx context.Context, user *domain.UserModel) error {
+	if m.forceCreateErr != nil {
+		return m.forceCreateErr
+	}
 	if user.ID == "" {
 		user.ID = "test-user-id"
 	}
