@@ -559,7 +559,7 @@ func (s *Service) RegisterByPassword(
 	}
 	usr := &domain.UserModel{Email: email, HashedPassword: &hash}
 	if createErr := s.userStore.Create(ctx, usr); createErr != nil {
-		if _, getErr := s.userStore.GetByEmail(ctx, email); getErr == nil {
+		if errors.Is(createErr, domain.ErrAlreadyExists) {
 			return nil, status.Error(codes.AlreadyExists, "user already exists")
 		}
 		slog.ErrorContext(ctx, "failed to create user", "error", createErr, "email", email)
