@@ -50,7 +50,7 @@ return s.rdb.Set(ctx, s.key(state), val, s.ttl).Err()
 // Returns the value if found, or nil if not present.
 var consumeStateScript = goredis.NewScript(`
 local v = redis.call("GET", KEYS[1])
-if not v then return false end
+if not v then return nil end
 redis.call("DEL", KEYS[1])
 return v
 `)
