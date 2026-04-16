@@ -411,7 +411,6 @@ func (s *Service) BindUserByOAuth(
 		slog.ErrorContext(ctx, "failed to fetch user info (bind)", "error", err)
 		return nil, status.Error(codes.Unauthenticated, "failed to fetch user info")
 	}
-	s.maybeFillOAuthEmail(ctx, userProvider, token.AccessToken, &userInfo)
 
 	providerIdentity, err := s.externalIdentityStore.GetByProviderID(ctx, stateData.Provider, userInfo.ID)
 	switch {
