@@ -268,6 +268,14 @@ func TestEnsureOAuthUser_IdentityCreateFailure_OrphanedUserDeleted_WithEmail(t *
 		t.Fatal("expected error, got nil")
 	}
 
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected gRPC status error, got %v", err)
+	}
+	if st.Code() != codes.AlreadyExists {
+		t.Fatalf("expected gRPC code %v, got %v", codes.AlreadyExists, st.Code())
+	}
+
 	// Verify the orphaned user was cleaned up.
 	count, _ := store.Count(context.Background())
 	if count != 0 {

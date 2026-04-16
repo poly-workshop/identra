@@ -46,11 +46,7 @@ func NewMongoUserStore(
 
 func isIndexNotFoundError(err error) bool {
 	var cmdErr mongo.CommandError
-	if errors.As(err, &cmdErr) && cmdErr.Code == 27 {
-		return true
-	}
-
-	return strings.Contains(strings.ToLower(err.Error()), "index not found")
+	return errors.As(err, &cmdErr) && cmdErr.Code == 27
 }
 
 func (r *mongoUserStore) ensureIndexes(ctx context.Context) error {
@@ -69,9 +65,9 @@ func (r *mongoUserStore) ensureIndexes(ctx context.Context) error {
 	models := []mongo.IndexModel{
 		{
 			Keys: bson.D{{Key: "email", Value: 1}},
-			// Sparse index allows multiple documents with NULL/empty email values
-			// while maintaining uniqueness constraint for non-empty values.
-			// This enables OAuth users without email to be created.
+			// Sparse index excludes documents where the email field is absent.
+			// An empty string is still indexed, so service-layer validation must
+			// reject blank emails before writes reach this store.
 			Options: options.Index().SetUnique(true).SetSparse(true).SetName("idx_email_unique"),
 		},
 	}

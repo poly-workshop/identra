@@ -431,9 +431,19 @@ func (s *Service) BindUserByOAuth(
 		}
 		if createErr := s.externalIdentityStore.Create(ctx, identity); createErr != nil {
 			if errors.Is(createErr, domain.ErrAlreadyExists) {
-				return nil, status.Error(codes.AlreadyExists, "oauth account already linked")
+				// A concurrent request may have created the same identity. Re-fetch
+				// and treat as success if it is linked to this user.
+				existing, refetchErr := s.externalIdentityStore.GetByProviderID(ctx, stateData.Provider, userInfo.ID)
+				if refetchErr != nil {
+					return nil, status.Error(codes.Internal, "failed to verify oauth link")
+				}
+				if existing.UserID != bindingUser.ID {
+					return nil, status.Error(codes.AlreadyExists, "oauth account already linked to another user")
+				}
+				// Idempotent: identity exists and belongs to this user.
+			} else {
+				return nil, status.Error(codes.Internal, "failed to link oauth account")
 			}
-			return nil, status.Error(codes.Internal, "failed to link oauth account")
 		}
 	default:
 		return nil, status.Error(codes.Internal, "failed to check existing oauth link")
@@ -844,6 +854,15 @@ func (s *Service) ensureOAuthUser(ctx context.Context, info UserInfo) (*domain.U
 				}
 				if createErr := s.externalIdentityStore.Create(ctx, identity); createErr != nil {
 					if errors.Is(createErr, domain.ErrAlreadyExists) {
+						// A concurrent request may have created the same identity for
+						// this user. Re-fetch and proceed if it belongs to the same user.
+						existingIdentity, getErr := s.externalIdentityStore.GetByProviderID(ctx, info.Provider, info.ID)
+						if getErr != nil {
+							return nil, status.Error(codes.Internal, "failed to verify oauth account link")
+						}
+						if existingIdentity.UserID == byEmail.ID {
+							return byEmail, nil
+						}
 						return nil, status.Error(codes.AlreadyExists, "oauth account already linked")
 					}
 					return nil, status.Error(codes.Internal, "failed to link oauth account")
@@ -853,6 +872,9 @@ func (s *Service) ensureOAuthUser(ctx context.Context, info UserInfo) (*domain.U
 				// Create new user and link external identity.
 				userModel := &domain.UserModel{Email: info.Email}
 				if createErr := s.userStore.Create(ctx, userModel); createErr != nil {
+					if errors.Is(createErr, domain.ErrAlreadyExists) {
+						return nil, status.Error(codes.AlreadyExists, "user already exists")
+					}
 					return nil, status.Error(codes.Internal, "failed to create user")
 				}
 				identity := &domain.ExternalIdentityModel{
