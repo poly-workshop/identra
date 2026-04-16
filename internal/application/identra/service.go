@@ -411,7 +411,7 @@ func (s *Service) BindUserByOAuth(
 		slog.ErrorContext(ctx, "failed to fetch user info (bind)", "error", err)
 		return nil, status.Error(codes.Unauthenticated, "failed to fetch user info")
 	}
-	if strings.TrimSpace(userInfo.ID) == "" {
+	if userInfo.ID == "" {
 		slog.ErrorContext(ctx, "provider returned empty user id (bind)", "provider", stateData.Provider)
 		return nil, status.Error(codes.Internal, "provider returned empty user id")
 	}
