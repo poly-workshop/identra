@@ -791,14 +791,18 @@ func (s *Service) GetCurrentUserLoginInfo(
 	if err != nil {
 		slog.WarnContext(ctx, "failed to fetch external identities", "error", err, "user_id", usr.ID)
 	} else {
+		var githubID string
 		for _, identity := range identities {
 			resp.OauthConnections = append(resp.OauthConnections, &identra_v1_pb.OAuthConnection{
 				Provider:       identity.Provider,
 				ProviderUserId: identity.ProviderUserID,
 			})
-			if identity.Provider == "github" {
-				resp.GithubId = &identity.ProviderUserID
+			if identity.Provider == "github" && (githubID == "" || identity.ProviderUserID < githubID) {
+				githubID = identity.ProviderUserID
 			}
+		}
+		if githubID != "" {
+			resp.GithubId = &githubID
 		}
 	}
 
