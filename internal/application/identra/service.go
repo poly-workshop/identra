@@ -853,12 +853,15 @@ func (s *Service) ensureOAuthUser(ctx context.Context, info UserInfo) (*domain.U
 					ProviderUserID: info.ID,
 				}
 				if createErr := s.externalIdentityStore.Create(ctx, identity); createErr != nil {
+					// Determine the response code before attempting cleanup so that the
+					// cleanup outcome does not affect the error returned to the caller.
+					isConflict := errors.Is(createErr, domain.ErrAlreadyExists)
 					// Compensate: remove the newly created user to avoid orphaned records.
 					if deleteErr := s.userStore.Delete(ctx, userModel.ID); deleteErr != nil {
 						slog.ErrorContext(ctx, "failed to clean up orphaned user after identity create failure",
 							"error", deleteErr, "user_id", userModel.ID)
 					}
-					if errors.Is(createErr, domain.ErrAlreadyExists) {
+					if isConflict {
 						return nil, status.Error(codes.AlreadyExists, "oauth account already linked")
 					}
 					return nil, status.Error(codes.Internal, "failed to create oauth identity")
@@ -879,12 +882,15 @@ func (s *Service) ensureOAuthUser(ctx context.Context, info UserInfo) (*domain.U
 			ProviderUserID: info.ID,
 		}
 		if createErr := s.externalIdentityStore.Create(ctx, identity); createErr != nil {
+			// Determine the response code before attempting cleanup so that the
+			// cleanup outcome does not affect the error returned to the caller.
+			isConflict := errors.Is(createErr, domain.ErrAlreadyExists)
 			// Compensate: remove the newly created user to avoid orphaned records.
 			if deleteErr := s.userStore.Delete(ctx, userModel.ID); deleteErr != nil {
 				slog.ErrorContext(ctx, "failed to clean up orphaned user after identity create failure",
 					"error", deleteErr, "user_id", userModel.ID)
 			}
-			if errors.Is(createErr, domain.ErrAlreadyExists) {
+			if isConflict {
 				return nil, status.Error(codes.AlreadyExists, "oauth account already linked")
 			}
 			return nil, status.Error(codes.Internal, "failed to create oauth identity")
