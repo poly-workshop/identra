@@ -871,31 +871,11 @@ func (s *Service) ensureOAuthUser(ctx context.Context, info UserInfo) (*domain.U
 				return nil, status.Error(codes.Internal, "failed to fetch user by email")
 			}
 		}
-		// No email provided; create user with external identity only.
-		userModel := &domain.UserModel{}
-		if createErr := s.userStore.Create(ctx, userModel); createErr != nil {
-			return nil, status.Error(codes.Internal, "failed to create user")
-		}
-		identity := &domain.ExternalIdentityModel{
-			UserID:         userModel.ID,
-			Provider:       info.Provider,
-			ProviderUserID: info.ID,
-		}
-		if createErr := s.externalIdentityStore.Create(ctx, identity); createErr != nil {
-			// Determine the response code before attempting cleanup so that the
-			// cleanup outcome does not affect the error returned to the caller.
-			isConflict := errors.Is(createErr, domain.ErrAlreadyExists)
-			// Compensate: remove the newly created user to avoid orphaned records.
-			if deleteErr := s.userStore.Delete(ctx, userModel.ID); deleteErr != nil {
-				slog.ErrorContext(ctx, "failed to clean up orphaned user after identity create failure",
-					"error", deleteErr, "user_id", userModel.ID)
-			}
-			if isConflict {
-				return nil, status.Error(codes.AlreadyExists, "oauth account already linked")
-			}
-			return nil, status.Error(codes.Internal, "failed to create oauth identity")
-		}
-		return userModel, nil
+		// The current persistence layer enforces unique email values, so creating
+		// a user without an email address can lead to duplicate empty-email
+		// records and subsequent signup failures. Reject this flow until missing
+		// emails are represented distinctly at the model/index level.
+		return nil, status.Error(codes.FailedPrecondition, "oauth provider did not supply an email address")
 	default:
 		return nil, status.Error(codes.Internal, "failed to fetch user by provider id")
 	}
