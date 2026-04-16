@@ -44,18 +44,31 @@ func NewMongoUserStore(
 	return repo, nil
 }
 
+func isIndexNotFoundError(err error) bool {
+	var cmdErr mongo.CommandError
+	return errors.As(err, &cmdErr) && cmdErr.Code == 27
+}
+
 func (r *mongoUserStore) ensureIndexes(ctx context.Context) error {
+	// Drop the stale github_id index left over from the old schema, if present.
+	// Ignore only the expected "index not found" case so fresh deployments and
+	// upgraded ones both work, but fail fast for operational problems.
+	if err := r.coll.Indexes().DropOne(ctx, "idx_github_id_unique"); err != nil {
+		if isIndexNotFoundError(err) {
+			slog.DebugContext(ctx, "stale github_id index not present", "error", err)
+		} else {
+			slog.WarnContext(ctx, "failed to drop stale github_id index", "error", err)
+			return err
+		}
+	}
+
 	models := []mongo.IndexModel{
 		{
 			Keys: bson.D{{Key: "email", Value: 1}},
-			// Sparse index allows multiple documents with NULL/empty email values
-			// while maintaining uniqueness constraint for non-empty values.
-			// This enables OAuth users without email to be created.
+			// Sparse index excludes documents where the email field is absent.
+			// An empty string is still indexed, so service-layer validation must
+			// reject blank emails before writes reach this store.
 			Options: options.Index().SetUnique(true).SetSparse(true).SetName("idx_email_unique"),
-		},
-		{
-			Keys:    bson.D{{Key: "github_id", Value: 1}},
-			Options: options.Index().SetUnique(true).SetSparse(true).SetName("idx_github_id_unique"),
 		},
 	}
 
@@ -86,10 +99,6 @@ func (r *mongoUserStore) GetByID(ctx context.Context, id string) (*domain.UserMo
 
 func (r *mongoUserStore) GetByEmail(ctx context.Context, email string) (*domain.UserModel, error) {
 	return r.findOne(ctx, bson.M{"email": email}, "email", email)
-}
-
-func (r *mongoUserStore) GetByGithubID(ctx context.Context, githubID string) (*domain.UserModel, error) {
-	return r.findOne(ctx, bson.M{"github_id": githubID}, "github_id", githubID)
 }
 
 func (r *mongoUserStore) Update(ctx context.Context, user *domain.UserModel) error {
