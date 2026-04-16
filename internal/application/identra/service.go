@@ -835,6 +835,9 @@ func (s *Service) ensureOAuthUser(ctx context.Context, info UserInfo) (*domain.U
 					ProviderUserID: info.ID,
 				}
 				if createErr := s.externalIdentityStore.Create(ctx, identity); createErr != nil {
+					if errors.Is(createErr, domain.ErrAlreadyExists) {
+						return nil, status.Error(codes.AlreadyExists, "oauth account already linked")
+					}
 					return nil, status.Error(codes.Internal, "failed to link oauth account")
 				}
 				return byEmail, nil
@@ -854,6 +857,9 @@ func (s *Service) ensureOAuthUser(ctx context.Context, info UserInfo) (*domain.U
 					if deleteErr := s.userStore.Delete(ctx, userModel.ID); deleteErr != nil {
 						slog.ErrorContext(ctx, "failed to clean up orphaned user after identity create failure",
 							"error", deleteErr, "user_id", userModel.ID)
+					}
+					if errors.Is(createErr, domain.ErrAlreadyExists) {
+						return nil, status.Error(codes.AlreadyExists, "oauth account already linked")
 					}
 					return nil, status.Error(codes.Internal, "failed to create oauth identity")
 				}
@@ -877,6 +883,9 @@ func (s *Service) ensureOAuthUser(ctx context.Context, info UserInfo) (*domain.U
 			if deleteErr := s.userStore.Delete(ctx, userModel.ID); deleteErr != nil {
 				slog.ErrorContext(ctx, "failed to clean up orphaned user after identity create failure",
 					"error", deleteErr, "user_id", userModel.ID)
+			}
+			if errors.Is(createErr, domain.ErrAlreadyExists) {
+				return nil, status.Error(codes.AlreadyExists, "oauth account already linked")
 			}
 			return nil, status.Error(codes.Internal, "failed to create oauth identity")
 		}

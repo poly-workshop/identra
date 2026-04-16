@@ -45,6 +45,13 @@ func NewMongoUserStore(
 }
 
 func (r *mongoUserStore) ensureIndexes(ctx context.Context) error {
+	// Drop the stale github_id index left over from the old schema, if present.
+	// This is a best-effort migration step; the error is intentionally ignored so
+	// that both fresh deployments (index never existed) and upgraded ones work.
+	if err := r.coll.Indexes().DropOne(ctx, "idx_github_id_unique"); err != nil {
+		slog.DebugContext(ctx, "could not drop stale github_id index (may not exist)", "error", err)
+	}
+
 	models := []mongo.IndexModel{
 		{
 			Keys: bson.D{{Key: "email", Value: 1}},

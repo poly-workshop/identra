@@ -252,3 +252,50 @@ func TestEnsureOAuthUser_LinkExistingUserByEmail(t *testing.T) {
 	}
 }
 
+func TestEnsureOAuthUser_IdentityCreateFailure_OrphanedUserDeleted_NoEmail(t *testing.T) {
+	store := newMockUserStore()
+	extStore := newMockExternalIdentityStore()
+	extStore.forceCreateErr = domain.ErrAlreadyExists
+	svc := &Service{userStore: store, externalIdentityStore: extStore}
+
+	info := UserInfo{
+		Provider: "github",
+		ID:       "github-fail",
+		Email:    "",
+	}
+
+	_, err := svc.ensureOAuthUser(context.Background(), info)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	// Verify the orphaned user was cleaned up.
+	count, _ := store.Count(context.Background())
+	if count != 0 {
+		t.Errorf("expected no users after identity create failure, got %d", count)
+	}
+}
+
+func TestEnsureOAuthUser_IdentityCreateFailure_OrphanedUserDeleted_WithEmail(t *testing.T) {
+	store := newMockUserStore()
+	extStore := newMockExternalIdentityStore()
+	extStore.forceCreateErr = domain.ErrAlreadyExists
+	svc := &Service{userStore: store, externalIdentityStore: extStore}
+
+	info := UserInfo{
+		Provider: "github",
+		ID:       "github-fail",
+		Email:    "new@example.com",
+	}
+
+	_, err := svc.ensureOAuthUser(context.Background(), info)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	// Verify the orphaned user was cleaned up.
+	count, _ := store.Count(context.Background())
+	if count != 0 {
+		t.Errorf("expected no users after identity create failure, got %d", count)
+	}
+}
