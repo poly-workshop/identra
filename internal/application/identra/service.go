@@ -789,7 +789,9 @@ func (s *Service) RefreshToken(
 		slog.ErrorContext(ctx, "failed to refresh token pair", "error", err)
 		return nil, status.Error(codes.Internal, "failed to refresh token")
 	}
-	s.revokeRefreshClaims(ctx, claims)
+	if err := s.revokeRefreshClaims(ctx, claims); err != nil {
+		return nil, err
+	}
 
 	return &identra_v1_pb.RefreshTokenResponse{Token: tokenPair}, nil
 }
