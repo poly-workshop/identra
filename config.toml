@@ -1,0 +1,15 @@
+# Local override file. Defaults are registered in
+# internal/infrastructure/bootstrap/config_defaults.go.
+#
+# Add only values that need to differ from the built-in defaults, for example:
+#
+# [auth.github]
+# client_id = "your-github-client-id"
+# client_secret = "your-github-client-secret"
+#
+# [smtp_mailer]
+# host = "smtp.example.com"
+# port = 587
+# username = "your-email@example.com"
+# password = "your-password"
+# from_email = "noreply@example.com"

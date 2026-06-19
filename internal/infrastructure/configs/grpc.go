@@ -43,15 +43,8 @@ type PersistenceConfig struct {
 	Mongo *mongo.Config
 }
 
-const (
-	DefaultOAuthStateExpiration   = 10 * time.Minute
-	DefaultAccessTokenExpiration  = 15 * time.Minute
-	DefaultRefreshTokenExpiration = 7 * 24 * time.Hour
-	DefaultTokenIssuer            = "identra"
-)
-
 func LoadGRPC() GRPCConfig {
-	cfg := GRPCConfig{
+	return GRPCConfig{
 		GRPCPort: bootstrap.Config().GetUint(GRPCPortKey),
 		SmtpMailer: smtp.Config{
 			Host:      bootstrap.Config().GetString(SmtpMailerHostKey),
@@ -96,22 +89,4 @@ func LoadGRPC() GRPCConfig {
 			},
 		},
 	}
-
-	if cfg.Auth.OAuth.StateExpirationDuration == 0 {
-		cfg.Auth.OAuth.StateExpirationDuration = DefaultOAuthStateExpiration
-	}
-	if cfg.Auth.Token.AccessTokenExpiration == 0 {
-		cfg.Auth.Token.AccessTokenExpiration = DefaultAccessTokenExpiration
-	}
-	if cfg.Auth.Token.RefreshTokenExpiration == 0 {
-		cfg.Auth.Token.RefreshTokenExpiration = DefaultRefreshTokenExpiration
-	}
-	if cfg.Auth.Token.Issuer == "" {
-		cfg.Auth.Token.Issuer = DefaultTokenIssuer
-	}
-	if cfg.Persistence.Type == "" {
-		cfg.Persistence.Type = "gorm"
-	}
-
-	return cfg
 }

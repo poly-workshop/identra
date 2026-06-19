@@ -3,16 +3,10 @@ package bootstrap
 import (
 	"log/slog"
 	"os"
-	"path"
-)
-
-const (
-	envMode         = "MODE"
-	modeDevelopment = "development"
+	"path/filepath"
 )
 
 var (
-	mode        string
 	cmdName     string
 	hostname, _ = os.Hostname()
 )
@@ -20,12 +14,12 @@ var (
 // Init initializes the application with the specified command name.
 func Init(cmd string) {
 	cmdName = cmd
-	mode = os.Getenv(envMode)
-	if mode == "" {
-		mode = modeDevelopment
+	workdir, err := os.Getwd()
+	if err != nil {
+		panic(err)
 	}
-	workdir, _ := os.Getwd()
-	initConfig(path.Join(workdir, "configs"))
+	rootWorkdir := findRootWorkdir(workdir)
+	initConfig(rootWorkdir)
 	initLog()
 	logConfig()
 	slog.Info("APP initialized")
@@ -34,12 +28,23 @@ func Init(cmd string) {
 // InitWithConfigPath initializes the application with a custom config path.
 func InitWithConfigPath(cmd string, configPath string) {
 	cmdName = cmd
-	mode = os.Getenv(envMode)
-	if mode == "" {
-		mode = modeDevelopment
-	}
 	initConfig(configPath)
 	initLog()
 	logConfig()
 	slog.Info("APP initialized")
+}
+
+func findRootWorkdir(start string) string {
+	dir := filepath.Clean(start)
+	for {
+		if _, err := os.Stat(filepath.Join(dir, configName+".toml")); err == nil {
+			return dir
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return filepath.Clean(start)
+		}
+		dir = parent
+	}
 }

@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/poly-workshop/identra/internal/infrastructure/bootstrap"
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
+	"github.com/poly-workshop/identra/internal/infrastructure/bootstrap"
 	"github.com/poly-workshop/identra/internal/infrastructure/configs"
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
@@ -166,7 +166,7 @@ func main() {
 	apiPrefix := "/api/"
 
 	// Create gateway instance
-	grpcEndpoint := fmt.Sprintf("localhost:%d", cfg.HTTPPort)
+	grpcEndpoint := fmt.Sprintf("localhost:%d", cfg.GRPCPort)
 	gateway, err := NewGateway(grpcEndpoint, staticDir, apiPrefix)
 	if err != nil {
 		log.Fatalf("failed to create gateway: %v", err)

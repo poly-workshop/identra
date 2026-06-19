@@ -34,8 +34,7 @@ WORKDIR /app
 # Run as nonroot user
 COPY --chown=65532:65532 --from=build /out/data /app/data
 COPY --chown=65532:65532 --from=build /out/app /app/app
-COPY --chown=65532:65532 --from=build /src/configs /app/configs
+COPY --chown=65532:65532 --from=build /src/config.toml /app/config.toml
 
 USER nonroot:nonroot
 ENTRYPOINT ["/app/app"]
-

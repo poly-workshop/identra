@@ -1,6 +1,5 @@
 bin
 __debug_bin*
-configs/development*
 
 # SQLite database files
 *.db

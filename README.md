@@ -21,10 +21,10 @@ The easiest way to run Identra is using Docker:
 
 ```bash
 # Run the gRPC service
-docker run -p 50051:50051 -v $(pwd)/configs:/app/configs ghcr.io/poly-workshop/identra:latest
+docker run -p 50051:50051 -v $(pwd)/config.toml:/app/config.toml ghcr.io/poly-workshop/identra:latest
 
 # Run the HTTP Gateway (in another terminal)
-docker run -p 8080:8080 -v $(pwd)/configs:/app/configs \
+docker run -p 8080:8080 -v $(pwd)/config.toml:/app/config.toml \
   -e SERVICE=identra-gateway ghcr.io/poly-workshop/identra:latest
 ```
 
@@ -43,36 +43,22 @@ go run ./cmd/identra-gateway
 
 ### Configuration
 
-Create a configuration file at `configs/grpc/default.toml`:
+Identra ships with local-friendly defaults in code. Use the root `config.toml` only for values that need to differ from those defaults, such as provider credentials, SMTP settings, or a production database:
 
 ```toml
-grpc_port = 50051
-
-[auth]
-jwt_secret = "your-secret-key-change-in-production"
-oauth_state_expiration = "10m"
-token_expiration = "24h"
-
-[redis]
-urls = "localhost:6379"
-
-[persistence.gorm]
-driver = "sqlite"  # or "postgres", "mysql"
-name = "data/users.db"
-sslmode = "disable"
+[auth.github]
+client_id = "your-github-client-id"
+client_secret = "your-github-client-secret"
 
 [smtp_mailer]
 host = "smtp.example.com"
 port = 587
 username = "your-email@example.com"
 password = "your-password"
-from = "noreply@example.com"
-
-[oauth.github]
-client_id = "your-github-client-id"
-client_secret = "your-github-client-secret"
-redirect_url = "http://localhost:8080/oauth/callback"
+from_email = "noreply@example.com"
 ```
+
+Default local values include `grpc_port = 50051`, `http_port = 8080`, Redis at `localhost:6379`, SQLite at `data/users.db`, `log.format = "tint"`, and 15-minute access / 7-day refresh tokens.
 
 ## Integrating Identra with Your Service
 
@@ -434,8 +420,8 @@ Identra supports multiple databases. Example PostgreSQL configuration:
 driver = "postgres"
 host = "localhost"
 port = 5432
-name = "identra"
-user = "identra_user"
+dbname = "identra"
+username = "identra_user"
 password = "secure_password"
 sslmode = "require"
 ```

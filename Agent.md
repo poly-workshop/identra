@@ -120,7 +120,7 @@ See `CONTRIBUTING.md`:
 
 ### Configuration knobs (selected)
 
-Config keys are defined in `internal/infrastructure/configs/keys.go` and set in `configs/grpc/default.toml` / `configs/gateway/default.toml`:
+Config keys are defined in `internal/infrastructure/configs/keys.go`. Built-in local defaults are registered in `internal/infrastructure/bootstrap/config_defaults.go`; the root `config.toml` is for overrides:
 
 - **Ports**
   - `grpc_port`
@@ -142,4 +142,3 @@ Config keys are defined in `internal/infrastructure/configs/keys.go` and set in 
 ### Important operational note (OAuth state storage)
 
 OAuth `state` is currently stored in an **in-memory** store (`internal/infrastructure/oauth/state_store.go`). In a multi-instance deployment, you’ll need a shared store (e.g., Redis) to make the OAuth flow work reliably across replicas.
-

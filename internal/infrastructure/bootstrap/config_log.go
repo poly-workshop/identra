@@ -8,7 +8,6 @@ import (
 // Sensitive values like passwords and secrets are not logged.
 func logConfig() {
 	slog.Info("Configuration loaded",
-		"mode", mode,
 		"log.level", config.GetString(configKeyLogLevel),
 		"log.format", config.GetString(configKeyLogFormat),
 	)
@@ -41,5 +40,6 @@ func logGRPCConfig() {
 func logGatewayConfig() {
 	slog.Info("Gateway server configuration",
 		"http_port", config.GetUint("http_port"),
+		"grpc_port", config.GetUint("grpc_port"),
 	)
 }

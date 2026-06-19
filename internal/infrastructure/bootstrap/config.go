@@ -2,14 +2,13 @@
 package bootstrap
 
 import (
-	"path"
 	"strings"
 
 	"github.com/spf13/viper"
 )
 
 const (
-	defaultConfigName = "default"
+	configName = "config"
 )
 
 var config *viper.Viper
@@ -20,41 +19,17 @@ func Config() *viper.Viper {
 }
 
 func initConfig(configPath string) {
-	viper.AddConfigPath(configPath)
-
-	viper.SetConfigName(defaultConfigName)
-	err := viper.ReadInConfig()
-	if err != nil {
+	v := viper.New()
+	applyConfigDefaults(v)
+	v.AddConfigPath(configPath)
+	v.SetConfigName(configName)
+	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			panic(err)
 		}
 	}
 
-	viper.SetConfigName(path.Join(cmdName, defaultConfigName))
-	err = viper.ReadInConfig()
-	if err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			panic(err)
-		}
-	}
-
-	viper.SetConfigName(mode)
-	err = viper.MergeInConfig()
-	if err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			panic(err)
-		}
-	}
-
-	viper.SetConfigName(path.Join(cmdName, mode))
-	err = viper.MergeInConfig()
-	if err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			panic(err)
-		}
-	}
-
-	viper.AutomaticEnv()
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	config = viper.GetViper()
+	v.AutomaticEnv()
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	config = v
 }
