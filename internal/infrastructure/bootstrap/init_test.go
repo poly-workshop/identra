@@ -29,3 +29,14 @@ func TestFindRootWorkdirFallsBackToStart(t *testing.T) {
 		t.Fatalf("expected fallback workdir %q, got %q", start, got)
 	}
 }
+
+func TestInitWithConfigPathEReturnsConfigReadErrors(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "config.toml"), []byte("grpc_port = \n"), 0o644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	if err := InitWithConfigPathE("test", root); err == nil {
+		t.Fatal("expected malformed config to return an error")
+	}
+}

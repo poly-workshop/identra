@@ -36,32 +36,32 @@ func (c Config) Validate() error {
 }
 
 // NewDB creates a new GORM database connection based on the configuration.
-func NewDB(cfg Config) *gorm.DB {
+func NewDB(cfg Config) (*gorm.DB, error) {
 	if err := cfg.Validate(); err != nil {
-		panic(err)
+		return nil, err
 	}
 	driver := cfg.Driver
 	switch driver {
 	case "postgres":
 		db, err := openPostgres(cfg)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		return db
+		return db, nil
 	case "mysql":
 		db, err := openMysql(cfg)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		return db
+		return db, nil
 	case "sqlite":
 		db, err := openSqlite(cfg)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		return db
+		return db, nil
 	default:
-		panic(fmt.Sprintf("unsupported database driver: %s", driver))
+		return nil, fmt.Errorf("unsupported database driver: %s", driver)
 	}
 }
 

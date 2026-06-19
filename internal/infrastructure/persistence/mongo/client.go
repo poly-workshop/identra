@@ -19,7 +19,7 @@ type Config struct {
 }
 
 // NewClient creates a new MongoDB client with the provided configuration.
-func NewClient(cfg Config) *mongo.Client {
+func NewClient(cfg Config) (*mongo.Client, error) {
 	// Set default timeouts if not provided
 	if cfg.ConnectTimeout == 0 {
 		cfg.ConnectTimeout = 10 * time.Second
@@ -34,7 +34,7 @@ func NewClient(cfg Config) *mongo.Client {
 	// Connect to MongoDB
 	client, err := mongo.Connect(clientOptions)
 	if err != nil {
-		panic(fmt.Sprintf("failed to connect to MongoDB: %v", err))
+		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}
 
 	// Ping to verify connection
@@ -42,14 +42,17 @@ func NewClient(cfg Config) *mongo.Client {
 	defer pingCancel()
 
 	if err := client.Ping(pingCtx, nil); err != nil {
-		panic(fmt.Sprintf("failed to ping MongoDB: %v", err))
+		return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
 	}
 
-	return client
+	return client, nil
 }
 
 // NewDatabase creates a new MongoDB database connection.
-func NewDatabase(cfg Config) *mongo.Database {
-	client := NewClient(cfg)
-	return client.Database(cfg.Database)
+func NewDatabase(cfg Config) (*mongo.Database, error) {
+	client, err := NewClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return client.Database(cfg.Database), nil
 }

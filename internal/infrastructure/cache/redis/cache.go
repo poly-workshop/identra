@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -32,9 +33,9 @@ type CacheConfig struct {
 }
 
 // NewCache creates a new cache instance with the provided configuration.
-func NewCache(cfg CacheConfig) *Cache {
+func NewCache(cfg CacheConfig) (*Cache, error) {
 	if cfg.Redis == nil {
-		panic("redisclient: Redis client is required for cache")
+		return nil, errors.New("redisclient: Redis client is required for cache")
 	}
 
 	// Set defaults
@@ -67,7 +68,7 @@ func NewCache(cfg CacheConfig) *Cache {
 	ctx := context.Background()
 	_, err := cfg.Redis.Set(ctx, refreshEventChannel, refreshEventChannel, 0).Result()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	// Note: This goroutine runs for the lifetime of the application.
@@ -94,7 +95,7 @@ func NewCache(cfg CacheConfig) *Cache {
 		}
 	}()
 
-	return cacheInstance
+	return cacheInstance, nil
 }
 
 func (c *Cache) publishCacheRefreshEvent(ctx context.Context, key string) error {

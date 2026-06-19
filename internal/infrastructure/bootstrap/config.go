@@ -2,6 +2,7 @@
 package bootstrap
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -18,18 +19,19 @@ func Config() *viper.Viper {
 	return config
 }
 
-func initConfig(configPath string) {
+func initConfig(configPath string) error {
 	v := viper.New()
 	applyConfigDefaults(v)
 	v.AddConfigPath(configPath)
 	v.SetConfigName(configName)
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			panic(err)
+			return fmt.Errorf("failed to read config: %w", err)
 		}
 	}
 
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	config = v
+	return nil
 }

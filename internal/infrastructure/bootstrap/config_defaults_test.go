@@ -25,7 +25,9 @@ func TestInitConfigAppliesDefaults(t *testing.T) {
 		"PERSISTENCE_GORM_DBNAME",
 	)
 
-	initConfig(t.TempDir())
+	if err := initConfig(t.TempDir()); err != nil {
+		t.Fatalf("failed to init config: %v", err)
+	}
 
 	if got := config.GetUint("grpc_port"); got != 50051 {
 		t.Fatalf("expected default grpc_port 50051, got %d", got)

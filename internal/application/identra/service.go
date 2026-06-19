@@ -113,7 +113,10 @@ func NewService(ctx context.Context, cfg Config) (*Service, error) {
 		Endpoint:     github.Endpoint,
 	}
 
-	rdb := redis.NewRDB(*cfg.RedisClient)
+	rdb, storeErr := redis.NewRDB(*cfg.RedisClient)
+	if storeErr != nil {
+		return nil, fmt.Errorf("failed to initialize redis client: %w", storeErr)
+	}
 
 	emailStore, storeErr := cache.NewRedisEmailCodeStore(10*time.Minute, rdb)
 	if storeErr != nil {
@@ -1002,9 +1005,12 @@ func buildStores(ctx context.Context, cfg Config) (domain.UserStore, domain.Exte
 		}
 		return userStore, extStore, cleanup, nil
 	case "", "gorm", "postgres", "mysql", "sqlite":
-		db := gorm.NewDB(*cfg.GORMClient)
+		db, dbErr := gorm.NewDB(*cfg.GORMClient)
+		if dbErr != nil {
+			return nil, nil, nil, fmt.Errorf("failed to initialize gorm database: %w", dbErr)
+		}
 		if err := db.AutoMigrate(&domain.UserModel{}, &domain.ExternalIdentityModel{}); err != nil {
-			slog.Error("failed to migrate database", "error", err)
+			return nil, nil, nil, fmt.Errorf("failed to migrate database: %w", err)
 		}
 		userStore := persistence.NewGormUserStore(db)
 		extStore := persistence.NewGormExternalIdentityStore(db)
