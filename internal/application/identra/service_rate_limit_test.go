@@ -10,6 +10,7 @@ import (
 	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
 	"github.com/poly-workshop/identra/internal/infrastructure/security"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 )
 
 // mockEmailCodeStore is a simple in-memory email code store for testing.
@@ -48,22 +49,26 @@ type mockRateLimiter struct {
 	allowed  bool
 	recorded int
 	resets   int
+	keys     []string
 }
 
 func newMockRateLimiter(allowed bool) *mockRateLimiter {
 	return &mockRateLimiter{allowed: allowed}
 }
 
-func (m *mockRateLimiter) IsAllowed(_ context.Context, _ string) (bool, error) {
+func (m *mockRateLimiter) IsAllowed(_ context.Context, key string) (bool, error) {
+	m.keys = append(m.keys, "check:"+key)
 	return m.allowed, nil
 }
 
-func (m *mockRateLimiter) Record(_ context.Context, _ string) error {
+func (m *mockRateLimiter) Record(_ context.Context, key string) error {
+	m.keys = append(m.keys, "record:"+key)
 	m.recorded++
 	return nil
 }
 
-func (m *mockRateLimiter) Reset(_ context.Context, _ string) error {
+func (m *mockRateLimiter) Reset(_ context.Context, key string) error {
+	m.keys = append(m.keys, "reset:"+key)
 	m.resets++
 	return nil
 }
@@ -127,6 +132,46 @@ func TestLoginByPassword_RateLimit_RecordsOnFailure(t *testing.T) {
 	if limiter.resets != 0 {
 		t.Errorf("expected no resets on failure, got %d", limiter.resets)
 	}
+}
+
+func TestLoginByPassword_RateLimit_RecordsForwardedClientOnFailure(t *testing.T) {
+	hash, err := security.HashPassword("correct")
+	if err != nil {
+		t.Fatalf("hash: %v", err)
+	}
+	store := newMockUserStore()
+	_ = store.Create(context.Background(), &domain.UserModel{
+		ID:             "uid1",
+		Email:          "user@example.com",
+		HashedPassword: &hash,
+	})
+
+	limiter := newMockRateLimiter(true)
+	svc := &Service{
+		userStore:        store,
+		loginRateLimiter: limiter,
+	}
+	ctx := metadata.NewIncomingContext(
+		context.Background(),
+		metadata.Pairs("x-forwarded-for", "203.0.113.10, 10.0.0.1"),
+	)
+
+	_, loginErr := svc.LoginByPassword(ctx, &identra_v1_pb.LoginByPasswordRequest{
+		Email:    "user@example.com",
+		Password: "wrong-password",
+	})
+	requireCode(t, loginErr, codes.Unauthenticated)
+
+	if limiter.recorded != 2 {
+		t.Fatalf("expected email and client failures to be recorded, got %d", limiter.recorded)
+	}
+	wantClientKey := "record:login:client:203.0.113.10"
+	for _, key := range limiter.keys {
+		if key == wantClientKey {
+			return
+		}
+	}
+	t.Fatalf("expected %q in recorded keys, got %#v", wantClientKey, limiter.keys)
 }
 
 func TestLoginByPassword_RateLimit_ResetsOnSuccess(t *testing.T) {

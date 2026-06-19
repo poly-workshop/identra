@@ -489,7 +489,8 @@ func (s *Service) SendLoginEmailCode(
 	}
 
 	if s.sendCodeRateLimiter != nil {
-		allowed, rlErr := s.sendCodeRateLimiter.IsAllowed(ctx, email)
+		keys := rateLimitKeys(ctx, "send_code", email)
+		allowed, rlErr := rateLimitAllowed(ctx, s.sendCodeRateLimiter, keys)
 		if rlErr != nil {
 			slog.ErrorContext(ctx, "send-code rate limiter error", "error", rlErr)
 			// fail open — a limiter error must not prevent legitimate users
@@ -497,7 +498,7 @@ func (s *Service) SendLoginEmailCode(
 			return nil, status.Error(codes.ResourceExhausted, "too many verification code requests, please try again later")
 		}
 		if rlErr == nil {
-			if recordErr := s.sendCodeRateLimiter.Record(ctx, email); recordErr != nil {
+			if recordErr := recordRateLimit(ctx, s.sendCodeRateLimiter, keys); recordErr != nil {
 				slog.ErrorContext(ctx, "failed to record send-code attempt", "error", recordErr)
 			}
 		}
@@ -607,7 +608,7 @@ func (s *Service) LoginByEmailCode(
 	}
 
 	if s.loginRateLimiter != nil {
-		allowed, rlErr := s.loginRateLimiter.IsAllowed(ctx, email)
+		allowed, rlErr := rateLimitAllowed(ctx, s.loginRateLimiter, rateLimitKeys(ctx, "login", email))
 		if rlErr != nil {
 			slog.ErrorContext(ctx, "login rate limiter error", "error", rlErr)
 			// fail open
@@ -623,7 +624,7 @@ func (s *Service) LoginByEmailCode(
 	}
 	if !ok {
 		if s.loginRateLimiter != nil {
-			if recordErr := s.loginRateLimiter.Record(ctx, email); recordErr != nil {
+			if recordErr := recordRateLimit(ctx, s.loginRateLimiter, rateLimitKeys(ctx, "login", email)); recordErr != nil {
 				slog.ErrorContext(ctx, "failed to record login failure", "error", recordErr)
 			}
 		}
@@ -643,7 +644,7 @@ func (s *Service) LoginByEmailCode(
 	}
 
 	if s.loginRateLimiter != nil {
-		if resetErr := s.loginRateLimiter.Reset(ctx, email); resetErr != nil {
+		if resetErr := s.loginRateLimiter.Reset(ctx, emailRateLimitKey("login", email)); resetErr != nil {
 			slog.ErrorContext(ctx, "failed to reset login rate limit", "error", resetErr)
 		}
 	}
@@ -713,7 +714,7 @@ func (s *Service) LoginByPassword(
 	}
 
 	if s.loginRateLimiter != nil {
-		allowed, rlErr := s.loginRateLimiter.IsAllowed(ctx, email)
+		allowed, rlErr := rateLimitAllowed(ctx, s.loginRateLimiter, rateLimitKeys(ctx, "login", email))
 		if rlErr != nil {
 			slog.ErrorContext(ctx, "login rate limiter error", "error", rlErr)
 			// fail open
@@ -743,7 +744,7 @@ func (s *Service) LoginByPassword(
 	}
 	if !valid {
 		if s.loginRateLimiter != nil {
-			if recordErr := s.loginRateLimiter.Record(ctx, email); recordErr != nil {
+			if recordErr := recordRateLimit(ctx, s.loginRateLimiter, rateLimitKeys(ctx, "login", email)); recordErr != nil {
 				slog.ErrorContext(ctx, "failed to record login failure", "error", recordErr)
 			}
 		}
@@ -751,7 +752,7 @@ func (s *Service) LoginByPassword(
 	}
 
 	if s.loginRateLimiter != nil {
-		if resetErr := s.loginRateLimiter.Reset(ctx, email); resetErr != nil {
+		if resetErr := s.loginRateLimiter.Reset(ctx, emailRateLimitKey("login", email)); resetErr != nil {
 			slog.ErrorContext(ctx, "failed to reset login rate limit", "error", resetErr)
 		}
 	}
@@ -909,6 +910,62 @@ func bearerToken(header string) string {
 		return ""
 	}
 	return parts[1]
+}
+
+func rateLimitKeys(ctx context.Context, scope, email string) []string {
+	keys := []string{emailRateLimitKey(scope, email)}
+	if client := clientRateLimitIdentity(ctx); client != "" {
+		keys = append(keys, scope+":client:"+client)
+	}
+	return keys
+}
+
+func emailRateLimitKey(scope, email string) string {
+	return scope + ":email:" + strings.ToLower(strings.TrimSpace(email))
+}
+
+func clientRateLimitIdentity(ctx context.Context) string {
+	for _, key := range []string{"x-forwarded-for", "x-real-ip", "x-client-id"} {
+		for _, value := range metadata.ValueFromIncomingContext(ctx, key) {
+			if identity := firstHeaderValue(value); identity != "" {
+				return identity
+			}
+		}
+	}
+	return ""
+}
+
+func firstHeaderValue(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	if idx := strings.IndexByte(value, ','); idx >= 0 {
+		value = value[:idx]
+	}
+	return strings.TrimSpace(value)
+}
+
+func rateLimitAllowed(ctx context.Context, limiter cache.RateLimiter, keys []string) (bool, error) {
+	for _, key := range keys {
+		allowed, err := limiter.IsAllowed(ctx, key)
+		if err != nil {
+			return false, err
+		}
+		if !allowed {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func recordRateLimit(ctx context.Context, limiter cache.RateLimiter, keys []string) error {
+	for _, key := range keys {
+		if err := limiter.Record(ctx, key); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Service) ensureOAuthUser(ctx context.Context, info UserInfo) (*domain.UserModel, error) {

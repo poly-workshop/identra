@@ -456,8 +456,8 @@ sslmode = "require"
 1. **Use environment variables** for sensitive configuration
 2. **Enable HTTPS** for all endpoints
 3. **Configure CORS** appropriately for your frontend domains
-4. **Set up monitoring** for token validation failures
-5. **Implement rate limiting** on authentication endpoints
+4. **Forward client IP headers** (`X-Forwarded-For` or `X-Real-IP`) from your trusted proxy so authentication rate limits can combine email and client-source controls
+5. **Set up monitoring** for token validation failures
 6. **Regular key rotation** following the documented procedures
 7. **Use Redis** for session storage in distributed deployments
 

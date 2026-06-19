@@ -63,6 +63,10 @@ func NewGateway(
 				return key, true
 			case "x-client-secret":
 				return key, true
+			case "x-forwarded-for":
+				return key, true
+			case "x-real-ip":
+				return key, true
 			default:
 				return "", false
 			}

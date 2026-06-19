@@ -119,6 +119,7 @@ See `CONTRIBUTING.md`:
 ### Runtime dependencies
 
 - **Redis** is required for email-code login (verification codes are stored in Redis).
+- Forward `X-Forwarded-For` or `X-Real-IP` from a trusted proxy so rate limits can combine email and client-source controls.
 - **SMTP** is optional (email sending is disabled when `smtp_mailer.host` is empty).
 - **Persistence** defaults to **SQLite via GORM** (`data/users.db`) but MongoDB is supported.
 
