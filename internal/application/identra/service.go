@@ -13,15 +13,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/poly-workshop/identra/internal/infrastructure/cache/redis"
-	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
-	"github.com/poly-workshop/identra/internal/infrastructure/persistence/gorm"
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"github.com/poly-workshop/identra/internal/domain"
 	"github.com/poly-workshop/identra/internal/infrastructure/cache"
+	"github.com/poly-workshop/identra/internal/infrastructure/cache/redis"
 	"github.com/poly-workshop/identra/internal/infrastructure/mail"
+	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
 	"github.com/poly-workshop/identra/internal/infrastructure/oauth"
 	"github.com/poly-workshop/identra/internal/infrastructure/persistence"
+	"github.com/poly-workshop/identra/internal/infrastructure/persistence/gorm"
 	"github.com/poly-workshop/identra/internal/infrastructure/security"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -359,7 +359,7 @@ func (s *Service) BindUserByOAuth(
 	ctx context.Context,
 	req *identra_v1_pb.BindUserByOAuthRequest,
 ) (*identra_v1_pb.BindUserByOAuthResponse, error) {
-	accessToken := strings.TrimSpace(req.GetAccessToken())
+	accessToken := accessTokenFromRequest(ctx, req.GetAccessToken())
 	if accessToken == "" {
 		return nil, status.Error(codes.InvalidArgument, "access token is required")
 	}
@@ -775,7 +775,7 @@ func (s *Service) GetCurrentUserLoginInfo(
 	ctx context.Context,
 	req *identra_v1_pb.GetCurrentUserLoginInfoRequest,
 ) (*identra_v1_pb.GetCurrentUserLoginInfoResponse, error) {
-	accessToken := strings.TrimSpace(req.GetAccessToken())
+	accessToken := accessTokenFromRequest(ctx, req.GetAccessToken())
 	if accessToken == "" {
 		return nil, status.Error(codes.InvalidArgument, "access token is required")
 	}
@@ -821,6 +821,23 @@ func (s *Service) GetCurrentUserLoginInfo(
 	}
 
 	return resp, nil
+}
+
+func accessTokenFromRequest(ctx context.Context, requestToken string) string {
+	for _, header := range metadata.ValueFromIncomingContext(ctx, "authorization") {
+		if token := bearerToken(header); token != "" {
+			return token
+		}
+	}
+	return strings.TrimSpace(requestToken)
+}
+
+func bearerToken(header string) string {
+	parts := strings.Fields(strings.TrimSpace(header))
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return ""
+	}
+	return parts[1]
 }
 
 func (s *Service) ensureOAuthUser(ctx context.Context, info UserInfo) (*domain.UserModel, error) {

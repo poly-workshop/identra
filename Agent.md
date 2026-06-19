@@ -39,7 +39,7 @@ The gateway mounts the API under an **`/api/`** prefix, so routes below are typi
   - `POST /token/refresh`: exchange `{ refresh_token }` for a new `TokenPair`.
 
 - **Session introspection**
-  - `POST /me/login-info`: returns linked login methods for `{ access_token }` (email, GitHub link status, etc.).
+  - `POST /me/login-info`: returns linked login methods for the bearer token (email, GitHub link status, etc.).
 
 ## Tokens & verification (what an agent should know)
 
@@ -67,11 +67,11 @@ Identra uses standard registered claims plus a few custom ones:
 
 ### How access tokens are used
 
-Identra’s own “authenticated” endpoints (`/oauth/bind`, `/me/login-info`) currently accept the access token **in the JSON body** as `access_token`.
-
-Other services should typically accept it via the standard HTTP header:
+Identra’s authenticated endpoints (`/oauth/bind`, `/me/login-info`) accept the access token via the standard HTTP header:
 
 - `Authorization: Bearer <access_token>`
+
+The older JSON body `access_token` field is still accepted for compatibility.
 
 ## Typical agent flows
 
@@ -96,7 +96,7 @@ Other services should typically accept it via the standard HTTP header:
 ### Bind GitHub to an existing user
 
 1. Start OAuth the same way (`/oauth/url`).
-2. `POST /oauth/bind` with `{ "access_token": "<current access token>", "code": "...", "state": "..." }`
+2. `POST /oauth/bind` with `Authorization: Bearer <current access token>` and `{ "code": "...", "state": "..." }`
 3. Returns a refreshed `TokenPair` after linking.
 
 ### Refresh tokens

@@ -351,8 +351,9 @@ Retrieve information about the currently authenticated user:
 
 ```bash
 curl -X POST http://localhost:8080/me/login-info \
+  -H "Authorization: Bearer your-access-token" \
   -H "Content-Type: application/json" \
-  -d '{"access_token": "your-access-token"}'
+  -d '{}'
 ```
 
 Response:
@@ -388,9 +389,11 @@ const { url, state } = await fetch(
 // After OAuth callback, bind the account
 await fetch('http://localhost:8080/oauth/bind', {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  },
   body: JSON.stringify({
-    access_token: accessToken,
     code: oauthCode,
     state: state
   })

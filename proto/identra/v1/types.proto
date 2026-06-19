@@ -155,7 +155,7 @@ message ListOAuthProvidersResponse {
 }
 
 message GetCurrentUserLoginInfoRequest {
-  // Access token for the currently authenticated user
+  // Deprecated: prefer Authorization: Bearer <access_token>.
   string access_token = 1;
 }
 
