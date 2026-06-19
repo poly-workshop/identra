@@ -16,6 +16,45 @@ It is written to be **unambiguous**: engineers should be able to implement or te
 
 ---
 
+## Implementation Roadmap
+
+Use this as the PR-sized execution plan for moving from the current user table toward the full model.
+
+### Current baseline
+
+- Users have one primary `email` field and optional password hash.
+- OAuth identities are split into `external_identities` with a unique `(provider, provider_user_id)` binding.
+- Password registration is explicit via `POST /password/register`; password login does not create or set accounts.
+- Refresh tokens can be revoked and are rotated on successful refresh.
+
+### Phase 1: Email identity table
+
+- Add `email_identities` with `user_id`, normalized `email`, `verified`, `primary`, `added_by`, and timestamps.
+- Backfill existing `users.email` into `email_identities` as `primary=true`.
+- Keep `users.email` temporarily as a denormalized primary email for compatibility.
+- Update registration, email-code login, OAuth login, and login-info responses to read/write through the email identity table.
+
+### Phase 2: Verified-email OAuth merge
+
+- Require provider email provenance: provider, email, verified flag, and whether the provider marks it primary.
+- Merge OAuth login into an existing user only when the matched email identity is verified and provider email is verified.
+- Return a conflict instead of merging when provider email is missing, unverified, or already linked inconsistently.
+- Add tests for same-provider login, new-provider bind, verified-email merge, and unverified-email no-merge.
+
+### Phase 3: Account management APIs
+
+- Add APIs to list login methods, add/remove secondary emails, set primary email, and unlink OAuth identities.
+- Require at least one remaining login method before removing an email/password/OAuth identity.
+- Add audit events for link, unlink, primary-change, password-change, and token revocation.
+
+### Phase 4: Phone/SMS identities
+
+- Add `phone_identities` with E.164 normalization, verification state, primary flag, and added-by metadata.
+- Add SMS-code send/login flows using the same rate-limit and verification-code patterns as email code.
+- Extend login-info responses with phone identity summaries.
+
+---
+
 ## Core Concepts
 
 ### User
