@@ -8,13 +8,15 @@ import (
 	"net"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
-	"github.com/poly-workshop/identra/internal/infrastructure/bootstrap"
-	"github.com/poly-workshop/identra/internal/infrastructure/cache/redis"
-	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"github.com/poly-workshop/identra/internal/application/identra"
+	"github.com/poly-workshop/identra/internal/infrastructure/bootstrap"
+	"github.com/poly-workshop/identra/internal/infrastructure/cache/redis"
 	"github.com/poly-workshop/identra/internal/infrastructure/configs"
+	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -56,6 +58,9 @@ func main() {
 		),
 	)
 	identra_v1_pb.RegisterIdentraServiceServer(grpcServer, authService)
+	healthServer := health.NewServer()
+	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+	healthpb.RegisterHealthServer(grpcServer, healthServer)
 	reflection.Register(grpcServer)
 
 	// Start gRPC server

@@ -406,6 +406,8 @@ For a complete API reference, see the OpenAPI specification at `gen/openapi/iden
 
 ### Main Endpoints
 
+- `GET /healthz` - Gateway process liveness
+- `GET /readyz` - Gateway readiness, including upstream gRPC health
 - `GET /.well-known/jwks.json` - Get JSON Web Key Set for token validation
 - `GET /oauth/url` - Get OAuth authorization URL
 - `POST /oauth/login` - Login via OAuth

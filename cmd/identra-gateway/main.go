@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
@@ -17,6 +18,7 @@ import (
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 func init() {
@@ -107,6 +109,30 @@ func validateCORSConfig(allowedOrigins []string, allowCredentials bool) error {
 	return nil
 }
 
+func (g *Gateway) handleHealthz(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
+}
+
+func (g *Gateway) handleReadyz(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	client := healthpb.NewHealthClient(g.grpcConn)
+	resp, err := client.Check(ctx, &healthpb.HealthCheckRequest{})
+	if err != nil || resp.GetStatus() != healthpb.HealthCheckResponse_SERVING {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte(`{"status":"not_ready"}`))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ready"}`))
+}
+
 // Handler returns an HTTP handler with CORS support and static file serving
 func (g *Gateway) Handler() http.Handler {
 	// Setup CORS
@@ -134,6 +160,8 @@ func (g *Gateway) Handler() http.Handler {
 
 	// Create a multiplexer that handles both API and static files
 	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", g.handleHealthz)
+	mux.HandleFunc("/readyz", g.handleReadyz)
 
 	// Handle API routes with the gRPC gateway
 	mux.Handle(g.apiPrefix, http.StripPrefix(strings.TrimSuffix(g.apiPrefix, "/"), g.mux))
