@@ -166,8 +166,7 @@ func main() {
 	apiPrefix := "/api/"
 
 	// Create gateway instance
-	grpcEndpoint := fmt.Sprintf("localhost:%d", cfg.GRPCPort)
-	gateway, err := NewGateway(grpcEndpoint, staticDir, apiPrefix)
+	gateway, err := NewGateway(cfg.GRPCEndpoint, staticDir, apiPrefix)
 	if err != nil {
 		log.Fatalf("failed to create gateway: %v", err)
 	}
@@ -181,7 +180,7 @@ func main() {
 
 	slog.Info("HTTP gateway server started",
 		"port", cfg.HTTPPort,
-		"grpc_endpoint", grpcEndpoint,
+		"grpc_endpoint", cfg.GRPCEndpoint,
 		"static_dir", staticDir,
 		"api_prefix", apiPrefix)
 

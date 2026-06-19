@@ -3,8 +3,9 @@ package configs
 // Configuration keys constants
 const (
 	// Server configuration keys
-	GRPCPortKey = "grpc_port"
-	HTTPPortKey = "http_port"
+	GRPCPortKey     = "grpc_port"
+	HTTPPortKey     = "http_port"
+	GRPCEndpointKey = "grpc_endpoint"
 
 	// Auth configuration keys
 	AuthRSAPrivateKeyKey            = "auth.rsa_private_key"

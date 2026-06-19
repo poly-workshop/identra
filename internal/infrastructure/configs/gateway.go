@@ -3,13 +3,13 @@ package configs
 import "github.com/poly-workshop/identra/internal/infrastructure/bootstrap"
 
 type GatewayConfig struct {
-	HTTPPort uint
-	GRPCPort uint
+	HTTPPort     uint
+	GRPCEndpoint string
 }
 
 func LoadGateway() GatewayConfig {
 	return GatewayConfig{
-		HTTPPort: bootstrap.Config().GetUint(HTTPPortKey),
-		GRPCPort: bootstrap.Config().GetUint(GRPCPortKey),
+		HTTPPort:     bootstrap.Config().GetUint(HTTPPortKey),
+		GRPCEndpoint: bootstrap.Config().GetString(GRPCEndpointKey),
 	}
 }

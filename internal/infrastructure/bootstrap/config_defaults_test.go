@@ -10,6 +10,7 @@ func TestInitConfigAppliesDefaults(t *testing.T) {
 	unsetConfigEnv(t,
 		"GRPC_PORT",
 		"HTTP_PORT",
+		"GRPC_ENDPOINT",
 		"LOG_LEVEL",
 		"LOG_FORMAT",
 		"AUTH_OAUTH_STATE_EXPIRATION",
@@ -29,6 +30,9 @@ func TestInitConfigAppliesDefaults(t *testing.T) {
 	}
 	if got := config.GetUint("http_port"); got != 8080 {
 		t.Fatalf("expected default http_port 8080, got %d", got)
+	}
+	if got := config.GetString("grpc_endpoint"); got != "localhost:50051" {
+		t.Fatalf("expected default grpc_endpoint localhost:50051, got %q", got)
 	}
 	if got := config.GetString(configKeyLogLevel); got != "info" {
 		t.Fatalf("expected default log level info, got %q", got)
