@@ -77,16 +77,17 @@ func (r *mongoExternalIdentityStore) Create(
 	ctx context.Context,
 	identity *domain.ExternalIdentityModel,
 ) error {
+	record := externalIdentityRecordFromDomain(identity)
 	now := time.Now().UTC()
-	if strings.TrimSpace(identity.ID) == "" {
-		identity.ID = uuid.New().String()
+	if strings.TrimSpace(record.ID) == "" {
+		record.ID = uuid.New().String()
 	}
-	if identity.CreatedAt.IsZero() {
-		identity.CreatedAt = now
+	if record.CreatedAt.IsZero() {
+		record.CreatedAt = now
 	}
-	identity.UpdatedAt = now
+	record.UpdatedAt = now
 
-	if _, err := r.coll.InsertOne(ctx, identity); err != nil {
+	if _, err := r.coll.InsertOne(ctx, record); err != nil {
 		slog.ErrorContext(
 			ctx,
 			"failed to create external identity (mongo)",
@@ -99,6 +100,7 @@ func (r *mongoExternalIdentityStore) Create(
 		}
 		return err
 	}
+	copyExternalIdentityRecordToDomain(record, identity)
 	slog.InfoContext(
 		ctx,
 		"external identity created successfully (mongo)",
@@ -113,11 +115,11 @@ func (r *mongoExternalIdentityStore) GetByProviderID(
 	ctx context.Context,
 	provider, providerUserID string,
 ) (*domain.ExternalIdentityModel, error) {
-	var identity domain.ExternalIdentityModel
+	var record externalIdentityRecord
 	err := r.coll.FindOne(ctx, bson.M{
 		"provider":         provider,
 		"provider_user_id": providerUserID,
-	}).Decode(&identity)
+	}).Decode(&record)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, domain.ErrNotFound
@@ -131,7 +133,7 @@ func (r *mongoExternalIdentityStore) GetByProviderID(
 		)
 		return nil, err
 	}
-	return &identity, nil
+	return externalIdentityRecordToDomain(record), nil
 }
 
 func (r *mongoExternalIdentityStore) GetByUserID(
@@ -145,18 +147,22 @@ func (r *mongoExternalIdentityStore) GetByUserID(
 	}
 	defer func() { _ = cursor.Close(ctx) }()
 
-	var identities []*domain.ExternalIdentityModel
+	var records []externalIdentityRecord
 	for cursor.Next(ctx) {
-		var identity domain.ExternalIdentityModel
-		if decodeErr := cursor.Decode(&identity); decodeErr != nil {
+		var record externalIdentityRecord
+		if decodeErr := cursor.Decode(&record); decodeErr != nil {
 			_ = cursor.Close(ctx)
 			return nil, decodeErr
 		}
-		identities = append(identities, &identity)
+		records = append(records, record)
 	}
 
 	if err := cursor.Err(); err != nil {
 		return nil, err
+	}
+	identities := make([]*domain.ExternalIdentityModel, 0, len(records))
+	for _, record := range records {
+		identities = append(identities, externalIdentityRecordToDomain(record))
 	}
 	return identities, nil
 }

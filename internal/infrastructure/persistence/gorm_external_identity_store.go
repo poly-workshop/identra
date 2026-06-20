@@ -21,7 +21,8 @@ func (r *gormExternalIdentityStore) Create(
 	ctx context.Context,
 	identity *domain.ExternalIdentityModel,
 ) error {
-	err := r.db.WithContext(ctx).Create(identity).Error
+	record := externalIdentityRecordFromDomain(identity)
+	err := r.db.WithContext(ctx).Create(&record).Error
 	if err != nil {
 		slog.ErrorContext(
 			ctx,
@@ -32,6 +33,7 @@ func (r *gormExternalIdentityStore) Create(
 		)
 		return wrapGormError(err)
 	}
+	copyExternalIdentityRecordToDomain(record, identity)
 	slog.InfoContext(
 		ctx,
 		"external identity created successfully",
@@ -46,25 +48,29 @@ func (r *gormExternalIdentityStore) GetByProviderID(
 	ctx context.Context,
 	provider, providerUserID string,
 ) (*domain.ExternalIdentityModel, error) {
-	var identity domain.ExternalIdentityModel
+	var record externalIdentityRecord
 	err := r.db.WithContext(ctx).
 		Where("provider = ? AND provider_user_id = ?", provider, providerUserID).
-		First(&identity).Error
+		First(&record).Error
 	if err != nil {
 		return nil, wrapGormError(err)
 	}
-	return &identity, nil
+	return externalIdentityRecordToDomain(record), nil
 }
 
 func (r *gormExternalIdentityStore) GetByUserID(
 	ctx context.Context,
 	userID string,
 ) ([]*domain.ExternalIdentityModel, error) {
-	var identities []*domain.ExternalIdentityModel
-	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Find(&identities).Error
+	var records []externalIdentityRecord
+	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Find(&records).Error
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to list external identities", "error", err, "user_id", userID)
 		return nil, err
+	}
+	identities := make([]*domain.ExternalIdentityModel, 0, len(records))
+	for _, record := range records {
+		identities = append(identities, externalIdentityRecordToDomain(record))
 	}
 	return identities, nil
 }

@@ -33,11 +33,13 @@ func wrapGormError(err error) error {
 }
 
 func (r *gormUserStore) Create(ctx context.Context, user *domain.UserModel) error {
-	err := r.db.WithContext(ctx).Create(user).Error
+	record := userRecordFromDomain(user)
+	err := r.db.WithContext(ctx).Create(&record).Error
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to create user", "error", err, "email", user.Email)
 		return wrapGormError(err)
 	}
+	copyUserRecordToDomain(record, user)
 	slog.InfoContext(
 		ctx,
 		"user created successfully",
@@ -50,37 +52,40 @@ func (r *gormUserStore) Create(ctx context.Context, user *domain.UserModel) erro
 }
 
 func (r *gormUserStore) GetByID(ctx context.Context, id string) (*domain.UserModel, error) {
-	var user domain.UserModel
-	err := r.db.WithContext(ctx).Where("id = ?", id).First(&user).Error
+	var record userRecord
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&record).Error
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to get user by ID", "error", err, "user_id", id)
 		return nil, wrapGormError(err)
 	}
+	user := userRecordToDomain(record)
 	slog.DebugContext(ctx, "user retrieved successfully", "user_id", user.ID, "email", user.Email)
-	return &user, nil
+	return user, nil
 }
 
 func (r *gormUserStore) GetByEmail(ctx context.Context, email string) (*domain.UserModel, error) {
-	var user domain.UserModel
-	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	var record userRecord
+	err := r.db.WithContext(ctx).Where("email = ?", email).First(&record).Error
 	if err != nil {
 		return nil, wrapGormError(err)
 	}
-	return &user, nil
+	return userRecordToDomain(record), nil
 }
 
 func (r *gormUserStore) Update(ctx context.Context, user *domain.UserModel) error {
-	err := r.db.WithContext(ctx).Save(user).Error
+	record := userRecordFromDomain(user)
+	err := r.db.WithContext(ctx).Save(&record).Error
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to update user", "error", err, "user_id", user.ID)
 		return wrapGormError(err)
 	}
+	copyUserRecordToDomain(record, user)
 	slog.DebugContext(ctx, "user updated successfully", "user_id", user.ID, "email", user.Email)
 	return nil
 }
 
 func (r *gormUserStore) Delete(ctx context.Context, id string) error {
-	result := r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.UserModel{})
+	result := r.db.WithContext(ctx).Where("id = ?", id).Delete(&userRecord{})
 	if result.Error != nil {
 		return wrapGormError(result.Error)
 	}
@@ -91,8 +96,8 @@ func (r *gormUserStore) Delete(ctx context.Context, id string) error {
 }
 
 func (r *gormUserStore) List(ctx context.Context, offset, limit int) ([]*domain.UserModel, error) {
-	var users []*domain.UserModel
-	err := r.db.WithContext(ctx).Offset(offset).Limit(limit).Find(&users).Error
+	var records []userRecord
+	err := r.db.WithContext(ctx).Offset(offset).Limit(limit).Find(&records).Error
 	if err != nil {
 		slog.ErrorContext(
 			ctx,
@@ -105,6 +110,10 @@ func (r *gormUserStore) List(ctx context.Context, offset, limit int) ([]*domain.
 			limit,
 		)
 		return nil, err
+	}
+	users := make([]*domain.UserModel, 0, len(records))
+	for _, record := range records {
+		users = append(users, userRecordToDomain(record))
 	}
 	slog.DebugContext(
 		ctx,
@@ -121,7 +130,7 @@ func (r *gormUserStore) List(ctx context.Context, offset, limit int) ([]*domain.
 
 func (r *gormUserStore) Count(ctx context.Context) (int64, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&domain.UserModel{}).Count(&count).Error
+	err := r.db.WithContext(ctx).Model(&userRecord{}).Count(&count).Error
 	if err != nil {
 		return 0, err
 	}

@@ -80,15 +80,17 @@ func (r *mongoUserStore) ensureIndexes(ctx context.Context) error {
 }
 
 func (r *mongoUserStore) Create(ctx context.Context, user *domain.UserModel) error {
-	r.populateForCreate(user)
+	record := userRecordFromDomain(user)
+	r.populateUserForCreate(&record)
 
-	if _, err := r.coll.InsertOne(ctx, user); err != nil {
+	if _, err := r.coll.InsertOne(ctx, record); err != nil {
 		slog.ErrorContext(ctx, "failed to create user (mongo)", "error", err, "email", user.Email)
 		if mongo.IsDuplicateKeyError(err) {
 			return domain.ErrAlreadyExists
 		}
 		return err
 	}
+	copyUserRecordToDomain(record, user)
 	slog.InfoContext(ctx, "user created successfully (mongo)", "user_id", user.ID, "email", user.Email)
 	return nil
 }
@@ -106,9 +108,10 @@ func (r *mongoUserStore) Update(ctx context.Context, user *domain.UserModel) err
 		return errors.New("user id is required for update")
 	}
 
-	r.populateForUpdate(user)
+	record := userRecordFromDomain(user)
+	r.populateUserForUpdate(&record)
 
-	result, err := r.coll.ReplaceOne(ctx, bson.M{"_id": user.ID}, user)
+	result, err := r.coll.ReplaceOne(ctx, bson.M{"_id": user.ID}, record)
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to update user (mongo)", "error", err, "user_id", user.ID)
 		return err
@@ -116,6 +119,7 @@ func (r *mongoUserStore) Update(ctx context.Context, user *domain.UserModel) err
 	if result.MatchedCount == 0 {
 		return domain.ErrNotFound
 	}
+	copyUserRecordToDomain(record, user)
 	slog.DebugContext(ctx, "user updated successfully (mongo)", "user_id", user.ID, "email", user.Email)
 	return nil
 }
@@ -148,20 +152,24 @@ func (r *mongoUserStore) List(ctx context.Context, offset, limit int) ([]*domain
 	}
 	defer func() { _ = cursor.Close(ctx) }()
 
-	var users []*domain.UserModel
+	var records []userRecord
 	for cursor.Next(ctx) {
-		var user domain.UserModel
-		if decodeErr := cursor.Decode(&user); decodeErr != nil {
+		var record userRecord
+		if decodeErr := cursor.Decode(&record); decodeErr != nil {
 			_ = cursor.Close(ctx)
 			return nil, decodeErr
 		}
-		users = append(users, &user)
+		records = append(records, record)
 	}
 
 	if err := cursor.Err(); err != nil {
 		return nil, err
 	}
 
+	users := make([]*domain.UserModel, 0, len(records))
+	for _, record := range records {
+		users = append(users, userRecordToDomain(record))
+	}
 	slog.DebugContext(ctx, "users listed successfully (mongo)", "count", len(users), "offset", offset, "limit", limit)
 	return users, nil
 }
@@ -175,8 +183,8 @@ func (r *mongoUserStore) Count(ctx context.Context) (int64, error) {
 }
 
 func (r *mongoUserStore) findOne(ctx context.Context, filter bson.M, key string, value any) (*domain.UserModel, error) {
-	var user domain.UserModel
-	err := r.coll.FindOne(ctx, filter).Decode(&user)
+	var record userRecord
+	err := r.coll.FindOne(ctx, filter).Decode(&record)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, domain.ErrNotFound
@@ -184,11 +192,12 @@ func (r *mongoUserStore) findOne(ctx context.Context, filter bson.M, key string,
 		slog.ErrorContext(ctx, "failed to fetch user (mongo)", "error", err, key, value)
 		return nil, err
 	}
+	user := userRecordToDomain(record)
 	slog.DebugContext(ctx, "user retrieved successfully (mongo)", "user_id", user.ID, "email", user.Email)
-	return &user, nil
+	return user, nil
 }
 
-func (r *mongoUserStore) populateForCreate(user *domain.UserModel) {
+func (r *mongoUserStore) populateUserForCreate(user *userRecord) {
 	now := time.Now().UTC()
 	if strings.TrimSpace(user.ID) == "" {
 		user.ID = uuid.New().String()
@@ -199,6 +208,6 @@ func (r *mongoUserStore) populateForCreate(user *domain.UserModel) {
 	user.UpdatedAt = now
 }
 
-func (r *mongoUserStore) populateForUpdate(user *domain.UserModel) {
+func (r *mongoUserStore) populateUserForUpdate(user *userRecord) {
 	user.UpdatedAt = time.Now().UTC()
 }

@@ -4,9 +4,6 @@ import (
 	"context"
 	"errors"
 	"time"
-
-	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 // ErrNotFound is returned when a resource is not found.
@@ -17,27 +14,13 @@ var ErrAlreadyExists = errors.New("resource already exists")
 
 // UserModel represents a user entity in the system.
 type UserModel struct {
-	ID               string         `gorm:"type:varchar(36);primaryKey" bson:"_id,omitempty" json:"id"`
-	CreatedAt        time.Time      `bson:"created_at,omitempty" json:"created_at"`
-	UpdatedAt        time.Time      `bson:"updated_at,omitempty" json:"updated_at"`
-	DeletedAt        gorm.DeletedAt `gorm:"index" bson:"-" json:"-"`
-	Email            string         `gorm:"type:varchar(255);uniqueIndex" bson:"email" json:"email"`
-	HashedPassword   *string        `gorm:"column:hashed_password" bson:"hashed_password,omitempty" json:"-"`
-	VerificationHash *string        `gorm:"column:hash"            bson:"hash,omitempty" json:"-"`
-	LastLoginAt      *time.Time     `                              bson:"last_login_at,omitempty" json:"last_login_at"`
-}
-
-// TableName returns the database table name for UserModel.
-func (UserModel) TableName() string {
-	return "users"
-}
-
-// BeforeCreate generates a UUID for the user before creating.
-func (u *UserModel) BeforeCreate(tx *gorm.DB) error {
-	if u.ID == "" {
-		u.ID = uuid.New().String()
-	}
-	return nil
+	ID               string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	Email            string
+	HashedPassword   *string
+	VerificationHash *string
+	LastLoginAt      *time.Time
 }
 
 // UserStore defines the interface for user persistence operations.

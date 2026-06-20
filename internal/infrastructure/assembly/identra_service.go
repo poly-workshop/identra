@@ -204,7 +204,7 @@ func buildStores(ctx context.Context, cfg configs.PersistenceConfig) (domain.Use
 		if dbErr != nil {
 			return nil, nil, nil, fmt.Errorf("failed to initialize gorm database: %w", dbErr)
 		}
-		if err := db.AutoMigrate(&domain.UserModel{}, &domain.ExternalIdentityModel{}); err != nil {
+		if err := persistence.AutoMigrateGorm(db); err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to migrate database: %w", err)
 		}
 		userStore := persistence.NewGormUserStore(db)
