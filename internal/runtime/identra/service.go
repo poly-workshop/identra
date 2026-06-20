@@ -1,4 +1,4 @@
-package assembly
+package identraruntime
 
 import (
 	"context"
@@ -10,12 +10,12 @@ import (
 	"github.com/poly-workshop/identra/internal/application/identra"
 	"github.com/poly-workshop/identra/internal/infrastructure/cache"
 	"github.com/poly-workshop/identra/internal/infrastructure/cache/redis"
-	"github.com/poly-workshop/identra/internal/infrastructure/configs"
 	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
 	"github.com/poly-workshop/identra/internal/infrastructure/oauth"
 	"github.com/poly-workshop/identra/internal/infrastructure/persistence"
 	"github.com/poly-workshop/identra/internal/infrastructure/persistence/gorm"
 	"github.com/poly-workshop/identra/internal/ports"
+	"github.com/poly-workshop/identra/internal/runtime/configs"
 	"github.com/poly-workshop/identra/internal/security"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -23,7 +23,7 @@ import (
 	"golang.org/x/oauth2/github"
 )
 
-func NewIdentraService(ctx context.Context, cfg configs.GRPCConfig) (*identra.Service, error) {
+func NewService(ctx context.Context, cfg configs.GRPCConfig) (*identra.Service, error) {
 	deps, err := buildIdentraDependencies(ctx, cfg)
 	if err != nil {
 		return nil, err

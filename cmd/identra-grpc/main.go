@@ -11,9 +11,9 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
-	"github.com/poly-workshop/identra/internal/infrastructure/assembly"
-	"github.com/poly-workshop/identra/internal/infrastructure/bootstrap"
-	"github.com/poly-workshop/identra/internal/infrastructure/configs"
+	"github.com/poly-workshop/identra/internal/runtime/bootstrap"
+	"github.com/poly-workshop/identra/internal/runtime/configs"
+	identraruntime "github.com/poly-workshop/identra/internal/runtime/identra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -40,7 +40,7 @@ func main() {
 
 	cfg := configs.LoadGRPC()
 
-	authService, err := assembly.NewIdentraService(ctx, cfg)
+	authService, err := identraruntime.NewService(ctx, cfg)
 	if err != nil {
 		log.Fatalf("failed to create identra service: %v", err)
 	}

@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/poly-workshop/identra/internal/infrastructure/bootstrap"
-	"github.com/poly-workshop/identra/internal/infrastructure/configs"
+	"github.com/poly-workshop/identra/internal/runtime/bootstrap"
+	"github.com/poly-workshop/identra/internal/runtime/configs"
 	"github.com/poly-workshop/identra/internal/transport/gateway"
 )
 
