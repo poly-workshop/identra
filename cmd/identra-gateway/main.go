@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/poly-workshop/identra/internal/runtime/bootstrap"
-	"github.com/poly-workshop/identra/internal/runtime/configs"
-	"github.com/poly-workshop/identra/internal/transport/gateway"
+	"github.com/poly-workshop/identra/internal/bootstrap"
+	"github.com/poly-workshop/identra/internal/config"
+	"github.com/poly-workshop/identra/internal/gateway"
 )
 
 func init() {
@@ -24,7 +24,7 @@ func main() {
 	ctx, stop := bootstrap.SignalContext(context.Background())
 	defer stop()
 
-	cfg := configs.LoadGateway()
+	cfg := config.LoadGateway()
 
 	cwd, err := os.Getwd()
 	if err != nil {

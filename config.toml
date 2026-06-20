@@ -1,5 +1,5 @@
 # Local override file. Defaults are registered in
-# internal/runtime/bootstrap/config_defaults.go.
+# internal/bootstrap/config_defaults.go.
 #
 # Add only values that need to differ from the built-in defaults, for example:
 #

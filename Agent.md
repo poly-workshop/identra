@@ -125,7 +125,7 @@ See `CONTRIBUTING.md`:
 
 ### Configuration knobs (selected)
 
-Config keys are defined in `internal/runtime/configs/keys.go`. Built-in local defaults are registered in `internal/runtime/bootstrap/config_defaults.go`; the root `config.toml` is for overrides:
+Config keys are defined in `internal/config/keys.go`. Built-in local defaults are registered in `internal/bootstrap/config_defaults.go`; the root `config.toml` is for overrides:
 
 - **Ports**
   - `grpc_port`
@@ -150,4 +150,4 @@ Config keys are defined in `internal/runtime/configs/keys.go`. Built-in local de
 
 ### OAuth state storage
 
-OAuth `state` is stored in Redis via `internal/infrastructure/cache/redis_oauth_state_store.go`, so multi-instance deployments share OAuth state as long as all replicas use the same Redis backend.
+OAuth `state` is stored in Redis via `internal/cache/redis_oauth_state_store.go`, so multi-instance deployments share OAuth state as long as all replicas use the same Redis backend.
