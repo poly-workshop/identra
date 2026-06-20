@@ -5,9 +5,6 @@ import (
 
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"github.com/poly-workshop/identra/internal/domain"
-	"github.com/poly-workshop/identra/internal/infrastructure/cache"
-	"github.com/poly-workshop/identra/internal/infrastructure/mail"
-	"github.com/poly-workshop/identra/internal/infrastructure/oauth"
 	"github.com/poly-workshop/identra/internal/infrastructure/security"
 	"golang.org/x/oauth2"
 )
@@ -16,8 +13,8 @@ import (
 type Service struct {
 	identra_v1_pb.UnimplementedIdentraServiceServer
 
-	emailCodeStore           cache.EmailCodeStore
-	oauthStateStore          oauth.StateStore
+	emailCodeStore           EmailCodeStore
+	oauthStateStore          OAuthStateStore
 	userStore                domain.UserStore
 	externalIdentityStore    domain.ExternalIdentityStore
 	userStoreCleanup         func(context.Context) error
@@ -25,17 +22,17 @@ type Service struct {
 	tokenCfg                 security.TokenConfig
 	githubOAuthConfig        *oauth2.Config
 	oauthFetchEmailIfMissing bool
-	mailer                   mail.Sender
+	mailer                   EmailSender
 
 	// loginRateLimiter counts failed login attempts per email address and
 	// blocks further attempts after the configured threshold.
-	loginRateLimiter cache.RateLimiter
+	loginRateLimiter RateLimiter
 	// sendCodeRateLimiter limits how many email verification codes can be sent
 	// to a single address within the configured window.
-	sendCodeRateLimiter cache.RateLimiter
+	sendCodeRateLimiter RateLimiter
 	// refreshTokenRevocations blocks reuse of refresh tokens after logout,
 	// explicit revocation, or successful refresh-token rotation.
-	refreshTokenRevocations cache.RefreshTokenRevocationStore
+	refreshTokenRevocations RefreshTokenRevocationStore
 }
 
 func (s *Service) Close(ctx context.Context) error {

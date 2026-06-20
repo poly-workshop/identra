@@ -9,11 +9,9 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
-	"github.com/poly-workshop/identra/internal/application/identra"
+	"github.com/poly-workshop/identra/internal/infrastructure/assembly"
 	"github.com/poly-workshop/identra/internal/infrastructure/bootstrap"
-	"github.com/poly-workshop/identra/internal/infrastructure/cache/redis"
 	"github.com/poly-workshop/identra/internal/infrastructure/configs"
-	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -38,9 +36,7 @@ func main() {
 	ctx := context.Background()
 	cfg := configs.LoadGRPC()
 
-	// Initialize services
-	authService, err := identra.NewService(ctx,
-		toIdentraConfig(cfg.Auth, cfg.Redis, cfg.SmtpMailer, cfg.Persistence))
+	authService, err := assembly.NewIdentraService(ctx, cfg)
 	if err != nil {
 		log.Fatalf("failed to create identra service: %v", err)
 	}
@@ -50,7 +46,6 @@ func main() {
 		}
 	}()
 
-	// Setup gRPC server with auth interceptor
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			bootstrap.BuildRequestIDInterceptor(),
@@ -63,7 +58,6 @@ func main() {
 	healthpb.RegisterHealthServer(grpcServer, healthServer)
 	reflection.Register(grpcServer)
 
-	// Start gRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCPort))
 	if err != nil {
 		log.Fatalf("failed to listen on gRPC port: %v", err)
@@ -72,28 +66,5 @@ func main() {
 	slog.Info("gRPC server started", "port", cfg.GRPCPort)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve gRPC: %v", err)
-	}
-}
-
-func toIdentraConfig(
-	authCfg configs.AuthConfig,
-	redisCfg redis.Config,
-	mailerCfg smtp.Config,
-	presistenceCfg configs.PersistenceConfig,
-) identra.Config {
-	return identra.Config{
-		RSAPrivateKey:                  authCfg.RSAPrivateKey,
-		GithubClientID:                 authCfg.OAuth.GithubClientID,
-		GithubClientSecret:             authCfg.OAuth.GithubClientSecret,
-		OAuthFetchEmailIfMissing:       authCfg.OAuth.FetchEmailIfMissing,
-		OAuthStateExpirationDuration:   authCfg.OAuth.StateExpirationDuration,
-		AccessTokenExpirationDuration:  authCfg.Token.AccessTokenExpiration,
-		RefreshTokenExpirationDuration: authCfg.Token.RefreshTokenExpiration,
-		TokenIssuer:                    authCfg.Token.Issuer,
-		SmtpMailer:                     mailerCfg,
-		PersistenceType:                presistenceCfg.Type,
-		GORMClient:                     presistenceCfg.GORM,
-		MongoClient:                    presistenceCfg.Mongo,
-		RedisClient:                    &redisCfg,
 	}
 }

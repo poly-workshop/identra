@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/poly-workshop/identra/internal/infrastructure/cache"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -42,7 +41,7 @@ func firstHeaderValue(value string) string {
 	return strings.TrimSpace(value)
 }
 
-func rateLimitAllowed(ctx context.Context, limiter cache.RateLimiter, keys []string) (bool, error) {
+func rateLimitAllowed(ctx context.Context, limiter RateLimiter, keys []string) (bool, error) {
 	for _, key := range keys {
 		allowed, err := limiter.IsAllowed(ctx, key)
 		if err != nil {
@@ -55,7 +54,7 @@ func rateLimitAllowed(ctx context.Context, limiter cache.RateLimiter, keys []str
 	return true, nil
 }
 
-func recordRateLimit(ctx context.Context, limiter cache.RateLimiter, keys []string) error {
+func recordRateLimit(ctx context.Context, limiter RateLimiter, keys []string) error {
 	for _, key := range keys {
 		if err := limiter.Record(ctx, key); err != nil {
 			return err

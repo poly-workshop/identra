@@ -11,7 +11,6 @@ import (
 
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"github.com/poly-workshop/identra/internal/domain"
-	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
 	"github.com/poly-workshop/identra/internal/infrastructure/security"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -103,7 +102,7 @@ func (s *Service) sendVerificationCode(to string, code string, expiryMinutes int
 </html>
 `, code, expiryMinutes)
 
-		return s.mailer.SendEmail(smtp.Message{
+		return s.mailer.SendEmail(EmailMessage{
 			ToEmails: []string{to},
 			Subject:  subject,
 			Body:     htmlBody,
@@ -112,7 +111,7 @@ func (s *Service) sendVerificationCode(to string, code string, expiryMinutes int
 	}
 
 	body := fmt.Sprintf("Your verification code is: %s (valid for %d minutes)", code, expiryMinutes)
-	return s.mailer.SendEmail(smtp.Message{
+	return s.mailer.SendEmail(EmailMessage{
 		ToEmails: []string{to},
 		Subject:  subject,
 		Body:     body,

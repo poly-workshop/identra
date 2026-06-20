@@ -6,8 +6,6 @@ import (
 
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"github.com/poly-workshop/identra/internal/domain"
-	"github.com/poly-workshop/identra/internal/infrastructure/cache"
-	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
 	"github.com/poly-workshop/identra/internal/infrastructure/security"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -42,7 +40,7 @@ func (m *mockEmailCodeStore) Consume(_ context.Context, email, code string) (boo
 // fakeMailer is a no-op mail sender for tests.
 type fakeMailer struct{}
 
-func (f *fakeMailer) SendEmail(_ smtp.Message) error { return nil }
+func (f *fakeMailer) SendEmail(_ EmailMessage) error { return nil }
 
 // mockRateLimiter is a controllable RateLimiter for unit tests.
 type mockRateLimiter struct {
@@ -73,8 +71,8 @@ func (m *mockRateLimiter) Reset(_ context.Context, key string) error {
 	return nil
 }
 
-// Verify mockRateLimiter satisfies the cache.RateLimiter interface at compile time.
-var _ cache.RateLimiter = (*mockRateLimiter)(nil)
+// Verify mockRateLimiter satisfies the RateLimiter interface at compile time.
+var _ RateLimiter = (*mockRateLimiter)(nil)
 
 // ---- LoginByPassword rate-limit tests ----
 

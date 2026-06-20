@@ -1,46 +1,6 @@
 package identra
 
-import (
-	"time"
-
-	"github.com/poly-workshop/identra/internal/infrastructure/cache/redis"
-	"github.com/poly-workshop/identra/internal/infrastructure/notification/smtp"
-	"github.com/poly-workshop/identra/internal/infrastructure/persistence/gorm"
-	"github.com/poly-workshop/identra/internal/infrastructure/persistence/mongo"
-)
-
-// Config holds all settings required to run the identra service.
-type Config struct {
-	RSAPrivateKey                  string
-	GithubClientID                 string
-	GithubClientSecret             string
-	OAuthFetchEmailIfMissing       bool
-	OAuthStateExpirationDuration   time.Duration
-	AccessTokenExpirationDuration  time.Duration
-	RefreshTokenExpirationDuration time.Duration
-	TokenIssuer                    string
-	SmtpMailer                     smtp.Config
-	PersistenceType                string
-	GORMClient                     *gorm.Config
-	MongoClient                    *mongo.Config
-	RedisClient                    *redis.Config
-
-	// LoginMaxAttempts is the maximum number of failed login attempts (password
-	// or email-code) allowed within LoginLockoutDuration before the account is
-	// temporarily locked. 0 means use DefaultLoginMaxAttempts.
-	LoginMaxAttempts int
-	// LoginLockoutDuration is the sliding window during which failed login
-	// attempts are counted. 0 means use DefaultLoginLockoutDuration.
-	LoginLockoutDuration time.Duration
-
-	// SendCodeMaxAttempts is the maximum number of email verification codes
-	// that can be requested per email address within SendCodeWindow. 0 means
-	// use DefaultSendCodeMaxAttempts.
-	SendCodeMaxAttempts int
-	// SendCodeWindow is the sliding window for the send-code rate limit. 0
-	// means use DefaultSendCodeWindow.
-	SendCodeWindow time.Duration
-}
+import "time"
 
 const (
 	DefaultOAuthStateExpiration   = 10 * time.Minute
@@ -62,9 +22,3 @@ const (
 	// verification codes.
 	DefaultSendCodeWindow = 1 * time.Hour
 )
-
-type MongoConfig struct {
-	URI        string
-	Database   string
-	Collection string
-}
