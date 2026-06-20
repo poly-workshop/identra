@@ -12,9 +12,9 @@ PROTO_TOOLS := \
 	github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
 	github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2
 
-.PHONY: verify test vet lint proto-lint generate generate-check tools proto-tools clean-tools
+.PHONY: verify test vet lint proto-lint arch-check generate generate-check tools proto-tools clean-tools
 
-verify: vet test lint generate-check
+verify: vet test lint arch-check generate-check
 
 test:
 	$(GO) test ./...
@@ -27,6 +27,9 @@ lint: $(GOLANGCI_LINT) proto-lint
 
 proto-lint:
 	$(BUF) lint
+
+arch-check:
+	! rg -n "github.com/poly-workshop/identra/internal/infrastructure" internal/application
 
 generate: proto-tools
 	PATH="$(PATH_WITH_TOOLS)" $(BUF) generate --clean

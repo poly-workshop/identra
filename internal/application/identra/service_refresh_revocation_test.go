@@ -7,7 +7,7 @@ import (
 	"time"
 
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
-	"github.com/poly-workshop/identra/internal/infrastructure/security"
+	"github.com/poly-workshop/identra/internal/security"
 	"google.golang.org/grpc/codes"
 )
 

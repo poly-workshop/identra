@@ -40,6 +40,9 @@ jobs:
       - name: Run tests
         run: go test ./...
 
+      - name: Check application boundaries
+        run: make arch-check
+
       - name: Lint protobuf
         run: buf lint
 

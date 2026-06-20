@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/poly-workshop/identra/internal/domain"
-	"github.com/poly-workshop/identra/internal/infrastructure/security"
+	"github.com/poly-workshop/identra/internal/security"
 	"golang.org/x/oauth2"
 )
 

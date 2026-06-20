@@ -16,7 +16,7 @@ import (
 	"github.com/poly-workshop/identra/internal/infrastructure/oauth"
 	"github.com/poly-workshop/identra/internal/infrastructure/persistence"
 	"github.com/poly-workshop/identra/internal/infrastructure/persistence/gorm"
-	"github.com/poly-workshop/identra/internal/infrastructure/security"
+	"github.com/poly-workshop/identra/internal/security"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"golang.org/x/oauth2"
