@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/poly-workshop/identra/internal/infrastructure/bootstrap"
 	"github.com/poly-workshop/identra/internal/infrastructure/configs"
@@ -18,6 +21,9 @@ func init() {
 }
 
 func main() {
+	ctx, stop := bootstrap.SignalContext(context.Background())
+	defer stop()
+
 	cfg := configs.LoadGateway()
 
 	cwd, err := os.Getwd()
@@ -51,7 +57,28 @@ func main() {
 		"static_dir", staticDir,
 		"api_prefix", apiPrefix)
 
-	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("failed to serve HTTP: %v", err)
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- httpServer.ListenAndServe()
+	}()
+
+	select {
+	case err := <-serveErr:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("failed to serve HTTP: %v", err)
+		}
+	case <-ctx.Done():
+		slog.Info("shutdown signal received, stopping HTTP gateway")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			log.Fatalf("failed to shutdown HTTP gateway: %v", err)
+		}
+
+		if err := <-serveErr; err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("failed to serve HTTP: %v", err)
+		}
+		slog.Info("HTTP gateway stopped")
 	}
 }

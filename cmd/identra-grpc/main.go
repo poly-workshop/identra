@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
 	"net"
+	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
@@ -33,7 +35,9 @@ func InterceptorLogger(l *slog.Logger) logging.Logger {
 }
 
 func main() {
-	ctx := context.Background()
+	ctx, stop := bootstrap.SignalContext(context.Background())
+	defer stop()
+
 	cfg := configs.LoadGRPC()
 
 	authService, err := assembly.NewIdentraService(ctx, cfg)
@@ -64,7 +68,36 @@ func main() {
 	}
 
 	slog.Info("gRPC server started", "port", cfg.GRPCPort)
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to serve gRPC: %v", err)
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- grpcServer.Serve(lis)
+	}()
+
+	select {
+	case err := <-serveErr:
+		if err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			log.Fatalf("failed to serve gRPC: %v", err)
+		}
+	case <-ctx.Done():
+		slog.Info("shutdown signal received, stopping gRPC server")
+		healthServer.SetServingStatus("", healthpb.HealthCheckResponse_NOT_SERVING)
+
+		stopped := make(chan struct{})
+		go func() {
+			grpcServer.GracefulStop()
+			close(stopped)
+		}()
+
+		select {
+		case <-stopped:
+		case <-time.After(10 * time.Second):
+			slog.Warn("gRPC graceful shutdown timed out, forcing stop")
+			grpcServer.Stop()
+		}
+
+		if err := <-serveErr; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			log.Fatalf("failed to serve gRPC: %v", err)
+		}
+		slog.Info("gRPC server stopped")
 	}
 }
