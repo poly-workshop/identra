@@ -1,6 +1,7 @@
 GO ?= go
 BUF ?= buf
 GOLANGCI_LINT_VERSION ?= v2.12.0
+IDENTRA_REDIS_URL ?= localhost:6379
 
 LOCAL_BIN := $(CURDIR)/bin
 PATH_WITH_TOOLS := $(LOCAL_BIN):$(PATH)
@@ -12,12 +13,18 @@ PROTO_TOOLS := \
 	github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
 	github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2
 
-.PHONY: verify test vet lint proto-lint arch-check generate generate-check tools proto-tools clean-tools
+.PHONY: dev verify test test-integration vet lint proto-lint arch-check generate generate-check tools proto-tools clean-tools
 
 verify: vet test lint arch-check generate-check
 
+dev:
+	docker compose up --build
+
 test:
 	$(GO) test ./...
+
+test-integration:
+	IDENTRA_REDIS_URL="$(IDENTRA_REDIS_URL)" $(GO) test ./internal/cache -run 'TestRedis.*Contract' -count=1
 
 vet:
 	$(GO) vet ./...
@@ -29,7 +36,7 @@ proto-lint:
 	$(BUF) lint
 
 arch-check:
-	! rg -n "github.com/slhmy/identra/internal/(app|bootstrap|cache|config|gateway|mail|oauth|store)" internal/identra
+	$(GO) test ./internal/arch
 
 generate: proto-tools
 	PATH="$(PATH_WITH_TOOLS)" $(BUF) generate --clean

@@ -39,6 +39,9 @@ func main() {
 	defer stop()
 
 	cfg := config.LoadGRPC()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("invalid gRPC config: %v", err)
+	}
 
 	authService, err := app.NewService(ctx, cfg)
 	if err != nil {

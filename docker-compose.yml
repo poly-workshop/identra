@@ -1,0 +1,45 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  identra-grpc:
+    build:
+      context: .
+      args:
+        SERVICE: identra-grpc
+    environment:
+      GRPC_PORT: "50051"
+      REDIS_URLS: redis:6379
+      PERSISTENCE_TYPE: gorm
+      PERSISTENCE_GORM_DRIVER: sqlite
+      PERSISTENCE_GORM_DBNAME: /app/data/users.db
+      AUTH_TOKEN_ISSUER: identra
+    ports:
+      - "50051:50051"
+    volumes:
+      - identra-data:/app/data
+    depends_on:
+      - redis
+
+  identra-gateway:
+    build:
+      context: .
+      args:
+        SERVICE: identra-gateway
+    environment:
+      HTTP_PORT: "8080"
+      GRPC_ENDPOINT: identra-grpc:50051
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost:8080
+      CORS_ALLOW_CREDENTIALS: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - identra-grpc
+
+volumes:
+  identra-data:
+  redis-data:

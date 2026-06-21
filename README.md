@@ -17,15 +17,43 @@ authentication process for applications.
 
 ### Running Identra
 
-The easiest way to run Identra is using Docker:
+For local development, start Redis, the gRPC service, and the HTTP gateway with one command:
 
 ```bash
+make dev
+```
+
+The local stack uses these defaults:
+
+- gRPC service: `localhost:50051`
+- HTTP gateway: `http://localhost:8080`
+- Gateway upstream: `identra-grpc:50051`
+- Redis: `redis:6379` inside Compose, exposed locally at `localhost:6379`
+- SQLite data: `/app/data/users.db` in the gRPC container
+
+The gateway health endpoints are available at:
+
+```bash
+curl http://localhost:8080/healthz
+curl http://localhost:8080/readyz
+```
+
+Identra publishes separate Docker images for the two binaries:
+
+```bash
+# Run Redis for cache-backed auth flows
+docker run --rm -p 6379:6379 redis:7-alpine
+
 # Run the gRPC service
-docker run -p 50051:50051 -v $(pwd)/config.toml:/app/config.toml ghcr.io/slhmy/identra:latest
+docker run --rm -p 50051:50051 \
+  -e REDIS_URLS=host.docker.internal:6379 \
+  -e PERSISTENCE_GORM_DBNAME=/app/data/users.db \
+  ghcr.io/slhmy/identra-grpc:latest
 
 # Run the HTTP Gateway (in another terminal)
-docker run -p 8080:8080 -v $(pwd)/config.toml:/app/config.toml \
-  -e SERVICE=identra-gateway ghcr.io/slhmy/identra:latest
+docker run --rm -p 8080:8080 \
+  -e GRPC_ENDPOINT=host.docker.internal:50051 \
+  ghcr.io/slhmy/identra-gateway:latest
 ```
 
 Or build and run from source:
@@ -58,7 +86,7 @@ password = "your-password"
 from_email = "noreply@example.com"
 ```
 
-Default local values include `grpc_port = 50051`, `http_port = 8080`, `grpc_endpoint = "localhost:50051"` for the gateway, Redis at `localhost:6379`, SQLite at `data/users.db`, `log.format = "tint"`, and 15-minute access / 7-day refresh tokens.
+Default local values include `grpc_port = 50051`, `http_port = 8080`, `grpc_endpoint = "localhost:50051"` for the gateway, Redis at `localhost:6379`, SQLite at `data/users.db`, `log.format = "tint"`, and 15-minute access / 7-day refresh tokens. Docker Compose overrides the gateway endpoint, Redis URL, and SQLite path for container networking.
 
 For browser clients on other origins, set explicit CORS origins:
 

@@ -5,7 +5,3 @@ __debug_bin*
 *.db
 *.sqlite
 *.sqlite3
-
-# Build artifacts
-identra-gateway
-identra-grpc

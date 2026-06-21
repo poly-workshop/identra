@@ -25,6 +25,9 @@ func main() {
 	defer stop()
 
 	cfg := config.LoadGateway()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("invalid gateway config: %v", err)
+	}
 
 	cwd, err := os.Getwd()
 	if err != nil {

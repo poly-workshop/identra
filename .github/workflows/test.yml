@@ -12,6 +12,16 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,6 +49,9 @@ jobs:
 
       - name: Run tests
         run: go test ./...
+
+      - name: Run Redis integration tests
+        run: make test-integration
 
       - name: Check application boundaries
         run: make arch-check

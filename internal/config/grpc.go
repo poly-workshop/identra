@@ -1,6 +1,9 @@
 package config
 
 import (
+	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/slhmy/identra/internal/bootstrap"
@@ -43,6 +46,104 @@ type PersistenceConfig struct {
 	Mongo *mongo.Config
 }
 
+func (c GRPCConfig) Validate() error {
+	if c.GRPCPort == 0 {
+		return errors.New("grpc port is required")
+	}
+	if err := validateRedis(c.Redis); err != nil {
+		return fmt.Errorf("redis config: %w", err)
+	}
+	if err := validateMailer(c.SmtpMailer); err != nil {
+		return fmt.Errorf("smtp mailer config: %w", err)
+	}
+	if err := c.Persistence.Validate(); err != nil {
+		return fmt.Errorf("persistence config: %w", err)
+	}
+	if err := c.Auth.Validate(); err != nil {
+		return fmt.Errorf("auth config: %w", err)
+	}
+	return nil
+}
+
+func (c AuthConfig) Validate() error {
+	if c.OAuth.StateExpirationDuration < 0 {
+		return errors.New("oauth state expiration cannot be negative")
+	}
+	if strings.TrimSpace(c.Token.Issuer) == "" {
+		return errors.New("token issuer is required")
+	}
+	if c.Token.AccessTokenExpiration <= 0 {
+		return errors.New("access token expiration must be positive")
+	}
+	if c.Token.RefreshTokenExpiration <= 0 {
+		return errors.New("refresh token expiration must be positive")
+	}
+	return nil
+}
+
+func (c PersistenceConfig) Validate() error {
+	switch strings.ToLower(strings.TrimSpace(c.Type)) {
+	case "", "gorm", "postgres", "mysql", "sqlite":
+		if c.GORM == nil {
+			return errors.New("gorm config is required")
+		}
+		if strings.TrimSpace(c.GORM.Driver) == "" {
+			return errors.New("gorm driver is required")
+		}
+		if strings.TrimSpace(c.GORM.DbName) == "" {
+			return errors.New("gorm dbname is required")
+		}
+		if err := c.GORM.Validate(); err != nil {
+			return err
+		}
+	case "mongo", "mongodb":
+		if c.Mongo == nil {
+			return errors.New("mongo config is required")
+		}
+		if strings.TrimSpace(c.Mongo.URI) == "" {
+			return errors.New("mongo uri is required")
+		}
+		if strings.TrimSpace(c.Mongo.Database) == "" {
+			return errors.New("mongo database is required")
+		}
+	default:
+		return fmt.Errorf("unsupported persistence type %q", c.Type)
+	}
+	return nil
+}
+
+func validateRedis(cfg redis.Config) error {
+	if len(cfg.Urls) == 0 {
+		return errors.New("at least one redis url is required")
+	}
+	for _, url := range cfg.Urls {
+		if strings.TrimSpace(url) == "" {
+			return errors.New("redis urls cannot contain empty values")
+		}
+	}
+	return nil
+}
+
+func validateMailer(cfg smtp.Config) error {
+	if strings.TrimSpace(cfg.Host) == "" {
+		return nil
+	}
+	switch {
+	case cfg.Port == 0:
+		return errors.New("smtp port is required")
+	case cfg.Port < 0 || cfg.Port > 65535:
+		return errors.New("smtp port must be between 1 and 65535")
+	case strings.TrimSpace(cfg.Username) == "":
+		return errors.New("smtp username is required")
+	case strings.TrimSpace(cfg.Password) == "":
+		return errors.New("smtp password is required")
+	case strings.TrimSpace(cfg.FromEmail) == "":
+		return errors.New("smtp from email is required")
+	default:
+		return nil
+	}
+}
+
 func LoadGRPC() GRPCConfig {
 	return GRPCConfig{
 		GRPCPort: bootstrap.Config().GetUint(GRPCPortKey),
@@ -71,7 +172,7 @@ func LoadGRPC() GRPCConfig {
 			},
 		},
 		Redis: redis.Config{
-			Urls:     bootstrap.Config().GetStringSlice(RedisUrlsKey),
+			Urls:     getStringSlice(RedisUrlsKey),
 			Password: bootstrap.Config().GetString(RedisPasswordKey),
 		},
 		Auth: AuthConfig{

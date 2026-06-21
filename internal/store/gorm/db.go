@@ -31,6 +31,11 @@ func (c Config) Validate() error {
 		if c.Username == "" {
 			return fmt.Errorf("username is required for %s driver", c.Driver)
 		}
+	case "sqlite":
+	case "":
+		return fmt.Errorf("database driver is required")
+	default:
+		return fmt.Errorf("unsupported database driver: %s", c.Driver)
 	}
 	return nil
 }
